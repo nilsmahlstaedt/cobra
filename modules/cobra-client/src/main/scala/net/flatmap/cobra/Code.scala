@@ -24,11 +24,15 @@ import scala.util.matching.Regex
 object Code {
   def loadDelayed(root: NodeSeqQuery): Future[Seq[String]] = Future.sequence {
     root.query(s"code[src]:not([src^='#'])").elements.map { code =>
+      /*
+        select all <code> nodes that posses a src attribute, which may not start with a '#'
+       */
       val src = code.getAttribute("src")
       val ext = src.split("\\.").last
       Mode.modes.find(_.fileendings.contains(ext)).foreach(code.classes += _.name)
       CobraJS.send(WatchFile(src))
       code.text = Ajax.get(src).filter(_.status == 200).map(_.responseText).recover {
+        // load src file via n ajax call to src's value
         case NonFatal(e) =>
           console.error(s"could not load source from '$src'")
           s"could not load source from '$src'"
