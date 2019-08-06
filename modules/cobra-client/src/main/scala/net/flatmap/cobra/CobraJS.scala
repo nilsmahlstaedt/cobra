@@ -61,6 +61,11 @@ object CobraJS extends SocketApp[ServerMessage,ClientMessage]("/socket","cobra",
     case FileUpdate(other) => // TODO: differentiate here!
       send(ResetAllSnippets)
       initialize()
+    case p@ProjectInitialized(_) =>
+      // decrease number of projects we are waiting for
+      Console.println(p)
+      Projects.initsRemainging := Projects.initsRemainging() - 1
+      Console.println(Projects.initsRemainging)
   }
 
   var heartBeatAcknowledged: Boolean = true
@@ -81,6 +86,7 @@ object CobraJS extends SocketApp[ServerMessage,ClientMessage]("/socket","cobra",
       handlers.clear()
       for {
         slides <- $"#slides" <<< "slides.html"
+        _ <- Projects.initProjects(slides)
         delayedSnippets <- Code.loadDelayed(slides)
         options <- initialOptions.future
       } {
