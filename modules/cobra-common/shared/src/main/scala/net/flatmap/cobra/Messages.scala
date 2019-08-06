@@ -16,6 +16,18 @@ case object HeartBeat extends ClientMessage with ServerMessage
 case class WatchFile(path: String) extends ClientMessage
 case class FileUpdate(path: String) extends ServerMessage
 
+/** initialize project on the server side and build up dictionary */
+case class InitProject(id: String, mode: Mode, root: String, srcRoots: List[String]) extends ClientMessage
+case class ProjectInitialized(id: String) extends ServerMessage
+
+case class GetSnippet(id: String, source: SnippetSource) extends ClientMessage
+case class Snippet(id: String, content: String) extends ServerMessage
+
+sealed trait SnippetSource
+case class PathSource(path: String) extends SnippetSource
+case class SubsnippetSource(base: String, partId: String, mode: Mode) extends SnippetSource
+case class LogicalPath(path: String) extends SnippetSource
+
 case class InitDoc(id: String, file: String, mode: Mode) extends ClientMessage with SnippetMessage
 case class Edit(id: String, operation: Operation[Char], revision: Long) extends ClientMessage with SnippetMessage
 case class Annotate(id: String, aid: String, annotations: Annotations, revision: Long) extends ClientMessage with SnippetMessage
@@ -41,6 +53,12 @@ case class SnippetChanged(src: String) extends ServerMessage
 case object ResetAllSnippets extends ClientMessage
 
 trait Picklers {
+  implicit val SnippetSourcePickler: Pickler[SnippetSource] =
+    compositePickler[SnippetSource]
+    .addConcreteType[PathSource]
+    .addConcreteType[SubsnippetSource]
+    .addConcreteType[LogicalPath]
+
   implicit val charActionPickler: Pickler[Action[Char]] =
     compositePickler[Action[Char]]
       .addConcreteType[Retain]
