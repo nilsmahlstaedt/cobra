@@ -14,10 +14,11 @@ import akka.stream.{ActorMaterializer, OverflowStrategy, scaladsl}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.CacheDirectives
 import akka.http.scaladsl.server.Directives._
-
 import better.files._
 import FileWatcher._
 import java.awt.Desktop
+import java.net.URI
+
 import net.flatmap.cobra.util._
 
 import scala.io
@@ -228,6 +229,9 @@ class CobraServer(val directory: File) {
         }
         Source.fromPublisher(pub)
       })
+    case i@InitProject(id, mode, root, srcRoots) =>
+      log.info(i.toString)
+      Source.single(ProjectInitialized(id))
     case ResetAllSnippets =>
       documents.foreach { case (id,actor) =>
         actor ! PoisonPill

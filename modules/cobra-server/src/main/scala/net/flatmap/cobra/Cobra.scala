@@ -1,5 +1,8 @@
 package net.flatmap.cobra
 
+import java.awt.Desktop
+import java.net.URI
+
 import better.files.File.OpenOptions
 import better.files._
 import better.files.Dsl.SymbolicOperations
