@@ -161,7 +161,6 @@ class CobraServer(val directory: File) {
 
   val locator = new WebJarAssetLocator()
 
-  val documents = mutable.Map.empty[String,ActorRef]
 
   val indexRaw = io.Source.fromInputStream(
     getClass.getClassLoader.getResourceAsStream(locator.getFullPath("cobra-client","index.html"))
@@ -201,10 +200,15 @@ class CobraServer(val directory: File) {
       bytes.reduce(_ ++ _).map(bytes => ClientMessage.read(bytes.asByteBuffer)).mapMaterializedValue(_ => NotUsed)
   }
 
+  val documents = mutable.Map.empty[String,ActorRef]
+  val projects = system.actorOf(ProjectMaster.props(PID.get()))
   val fileWatchers = mutable.Map.empty[File,Source[FileUpdate,NotUsed]]
 
   def handleRequest(client: ActorRef): ClientMessage => Source[ServerMessage,NotUsed] = {
     case HeartBeat => Source.single(HeartBeat)
+    case msg: ProjectMessage =>
+      projects.tell(msg, client)
+      Source.empty
     case msg@InitDoc(id,content,mode) =>
       documents.get(id).fold[Unit] {
         log.info(s"initializing new ${mode.name} document '$id'")
@@ -229,9 +233,6 @@ class CobraServer(val directory: File) {
         }
         Source.fromPublisher(pub)
       })
-    case i@InitProject(id, mode, root, srcRoots) =>
-      log.info(i.toString)
-      Source.single(ProjectInitialized(id))
     case ResetAllSnippets =>
       documents.foreach { case (id,actor) =>
         actor ! PoisonPill
