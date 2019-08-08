@@ -25,7 +25,7 @@ object Code {
   def loadDelayed(root: NodeSeqQuery): Future[Seq[String]] = Future.sequence {
     root.query(s"code[src]:not([src^='#'])").elements.map { code =>
       /*
-        select all <code> nodes that posses a src attribute, which may not start with a '#'
+        select all <code> nodes that posses a src attribute, which do not start with a '#'
        */
       val src = code.getAttribute("src")
       val ext = src.split("\\.").last
