@@ -63,9 +63,9 @@ object Cobra extends App {
 
   { // initialize
     printLogo()
-    assume(directory.exists, "could not find " + directory)
-    assume(directory.isDirectory, directory + " is not a directory")
-    assume(directory.isReadable, "can not read " + directory)
+    assume(directory.exists, "could not find " + directory.toString())
+    assume(directory.isDirectory, directory.toString() + " is not a directory")
+    assume(directory.isReadable, "can not read " + directory.toString())
     assume((directory / "slides.html").exists(), "no slides.html found")
     assume((directory / "cobra.conf").exists(), "no cobra.conf found")
 
