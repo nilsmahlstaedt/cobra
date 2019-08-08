@@ -19,7 +19,11 @@ object LSLauncher {
 
   case class LSPProcess(process: Process, stdIn: OutputStream,stdOut: InputStream, stdErr: InputStream)
 
-  def launch(language: Language, projectRoot: Path, pid: Option[Long] = None, logErrorOut: Boolean = false): Try[LanguageServer] = Try{
+  def launch(language: Language,
+              projectRoot: Path,
+              pid: Option[Long] = None,
+              logErrorOut: Boolean = false,
+              printDebugOutput: Boolean = false ): Try[LanguageServer] = Try{
 
     val conf = language.lsConfig
     println(conf)
@@ -30,7 +34,7 @@ object LSLauncher {
     }
 
     //launch server
-    val launcher: Launcher[LanguageServer] = LSPLauncher.createClientLauncher(new NoOpClient(true), proc.stdOut, proc.stdIn)
+    val launcher: Launcher[LanguageServer] = LSPLauncher.createClientLauncher(new NoOpClient(printDebugOutput), proc.stdOut, proc.stdIn)
     launcher.startListening()
 
 
@@ -38,7 +42,7 @@ object LSLauncher {
 
     println("initialize!")
     val initializationResult = server.initialize(
-      generateInitParams(pid.getOrElse(PID.get()).toInt, projectRoot, false)
+      generateInitParams(pid.getOrElse(PID.get()).toInt, projectRoot, printDebugOutput)
     ).get
     println(s"initialize result: $initializationResult")
 
