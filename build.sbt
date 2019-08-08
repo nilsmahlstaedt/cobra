@@ -50,7 +50,7 @@ lazy val server = (project in file("modules/cobra-server"))
     libraryDependencies += "com.github.pathikrit" %% "better-files" % "3.8.0",
     libraryDependencies += "com.github.pathikrit" %% "better-files-akka" % "3.8.0",
     libraryDependencies += "org.webjars.npm" % "katex" % "0.9.0"
-  ).dependsOn(commonJVM, clientAssets)
+  ).dependsOn(commonJVM, clientAssets, lsbinding)
 
 lazy val clientAssets  = (project in file("modules/cobra-client"))
   .enablePlugins(SbtWeb)
@@ -100,6 +100,14 @@ lazy val common = crossProject(JSPlatform, JVMPlatform).in(file("modules/cobra-c
     libraryDependencies += "io.suzaku" %%% "boopickle" % "1.3.1"
   ).jvmSettings(
     libraryDependencies += "org.scala-js" %% "scalajs-stubs" % "1.0.0" % "provided"
+  )
+
+lazy val lsbinding = (project in file("modules/cobra-lsbinding"))
+  .settings(commonSettings :_*)
+  .settings(
+    name := "cobra.lsbinding",
+    libraryDependencies += "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.7.0",
+    libraryDependencies += "com.typesafe" % "config" % "1.3.4"
   )
 
 lazy val commonJS = common.js
