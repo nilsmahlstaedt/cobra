@@ -10,6 +10,7 @@ import scala.util.matching.Regex
 sealed trait ClientMessage
 sealed trait ServerMessage
 sealed trait SnippetMessage { val id: String }
+sealed trait ProjectMessage { val id: String }
 
 case object HeartBeat extends ClientMessage with ServerMessage
 
@@ -17,14 +18,15 @@ case class WatchFile(path: String) extends ClientMessage
 case class FileUpdate(path: String) extends ServerMessage
 
 /** initialize project on the server side and build up dictionary */
-case class InitProject(id: String, mode: Mode, root: String, srcRoots: List[String]) extends ClientMessage
-case class ProjectInitialized(id: String) extends ServerMessage
+case class InitProject(id: String, mode: Mode, root: String, srcRoots: List[String]) extends ClientMessage with ProjectMessage
+case class ProjectInitialized(id: String) extends ServerMessage with ProjectMessage
 
-case class GetSnippet(id: String, source: SnippetSource) extends ClientMessage
-case class Snippet(id: String, content: String) extends ServerMessage
+case class GetSnippet(id: String, source: SnippetSource) extends ClientMessage with ProjectMessage
+case class ResolvedSnippet(id: String, content: String) extends ServerMessage with ProjectMessage
+case class UnkownSnippet(id: String) extends ServerMessage with ProjectMessage
 
 sealed trait SnippetSource
-case class PathSource(path: String) extends SnippetSource
+case class PathSource(path: String, startLine: Option[Int] = None, endLine: Option[Int] = None) extends SnippetSource
 case class SubsnippetSource(base: String, partId: String, mode: Mode) extends SnippetSource
 case class LogicalPath(path: String) extends SnippetSource
 
