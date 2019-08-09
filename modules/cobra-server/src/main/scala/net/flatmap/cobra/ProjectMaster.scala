@@ -5,9 +5,10 @@ import better.files._
 
 import scala.util.{Failure, Properties, Success, Try}
 
-class ProjectMaster(mainPID: Long) extends Actor with ActorLogging {
+class ProjectMaster(mainPID: Long, baseDir: File) extends Actor with ActorLogging {
 
   override def receive: Receive = running(Map.empty)
+  private val baseDirStr = baseDir.path.toAbsolutePath.toString
 
   def running(projects: Map[String, ActorRef]): Receive = {
     case msg@InitProject(id, _, _, _) if projects.contains(id) =>
@@ -34,7 +35,7 @@ class ProjectMaster(mainPID: Long) extends Actor with ActorLogging {
       }
 
     case GetSnippet(reqId, PathSource(path, startOpt, endOpt)) =>
-      getPathSnippet(path, startOpt, endOpt) match {
+      getPathSnippet(baseDirStr, path, startOpt, endOpt) match {
         case Success(content) =>
           log.debug(s"resolved snippet $reqId")
           sender() ! ResolvedSnippet(reqId, content)
@@ -48,10 +49,10 @@ class ProjectMaster(mainPID: Long) extends Actor with ActorLogging {
     case e => log.warning(s"received unkown message: $e")
   }
 
-  def getPathSnippet(path: String, from: Option[Int], to: Option[Int]): Try[String] = {
+  def getPathSnippet(base: String, path: String, from: Option[Int], to: Option[Int]): Try[String] = {
     for {
       lines <- Try {
-        File(path).lines
+        (base / path).lines
       }
       firstLine = from.getOrElse(0)
       lastLines = to.getOrElse(lines.size)
@@ -65,5 +66,5 @@ class ProjectMaster(mainPID: Long) extends Actor with ActorLogging {
 }
 
 object ProjectMaster {
-  def props(mainPID: Long): Props = Props(new ProjectMaster(mainPID))
+  def props(mainPID: Long, baseDir: File): Props = Props(new ProjectMaster(mainPID, baseDir))
 }

@@ -201,7 +201,7 @@ class CobraServer(val directory: File) {
   }
 
   val documents = mutable.Map.empty[String,ActorRef]
-  val projects = system.actorOf(ProjectMaster.props(PID.get()))
+  val projects = system.actorOf(ProjectMaster.props(PID.get(), directory))
   val fileWatchers = mutable.Map.empty[File,Source[FileUpdate,NotUsed]]
 
   def handleRequest(client: ActorRef): ClientMessage => Source[ServerMessage,NotUsed] = {
