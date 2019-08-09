@@ -3,7 +3,7 @@ package net.flatmap.cobra
 import java.util.UUID
 
 import net.flatmap.collaboration.{Annotations, ClientInterface, EditorInterface, Operation}
-import net.flatmap.js.codemirror._
+import net.flatmap.js.codemirror.{Mode => CMMOde, _}
 import net.flatmap.js.reveal.{Reveal, RevealEvents, _}
 import net.flatmap.js.util._
 import org.scalajs.dom.ext.Ajax
@@ -38,7 +38,7 @@ object Code {
       val mode = Mode.modes.find(_.fileendings.contains(ext)).getOrElse(Plain)
       code.classes += mode.name
 
-      openSnippetRequests.modify(current => current + (reqId -> ((content: String) => {
+      openSnippetRequests.modify(_ + (reqId -> ((content: String) => {
         code.text = content
         Code.openSnippetRequests.modify(_ - reqId)
       })))
@@ -47,19 +47,22 @@ object Code {
       CobraJS.send(GetSnippet(reqId, PathSource(src, from, to)))
     }
 
-
+    // fulfill promise if no snippet remains to be inserted
     openSnippetRequests.react(remaining => {
+      console.info(s"waiting for ${remaining.size} snippets to load")
       if(remaining.isEmpty) p.success(())
     })
 
-    p.future.onComplete(_ =>
+    val fut = p.future
+    
+    fut.onComplete(_ =>
       console.info("delayed snippet loading is completed!")
     )
 
-    // should there be no projects to init complete the promise right now!
+    // should there be no snippet to load complete the promise right now!
     if(openSnippetRequests().isEmpty) p.success(())
 
-    p.future
+    fut
   }
 
   def loadDelayed(root: NodeSeqQuery): Future[Seq[String]] = Future.sequence {
@@ -368,7 +371,7 @@ object Code {
         editor.on("blur", { cm: CodeMirror =>
           Reveal.configure(js.Dynamic.literal(keyboard = true).asInstanceOf[RevealOptions])
         })
-        
+
         editor.setOption("states",code.classes.contains("states"))
         editor.setOption("no-infos",code.classes.contains("no-infos"))
         editor.setOption("no-warnings",code.classes.contains("no-warnings"))

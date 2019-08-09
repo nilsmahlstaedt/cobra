@@ -9,13 +9,10 @@ import scala.concurrent.{Future, Promise}
 object Projects {
 
   //TODO replace with a set of project id's?
-  val initsRemainging: RVar[Int] = RVar.apply(0)
+  val initsRemainging: RVar[Set[String]] = RVar.apply(Set.empty)
 
   def initProjects(root: NodeSeqQuery): Future[Unit] = {
     console.info("initializing projects")
-
-    //reset inits
-    initsRemainging := 0
 
     root.query("div[data-key][data-language][data-root][data-srcRoots]").elements.foreach { project =>
       //select all nodes with 'project-definition' class
@@ -27,28 +24,27 @@ object Projects {
       mode match {
         case Some(m) =>
           CobraJS.send(InitProject(key, m, root, srcRoots))
-          initsRemainging := initsRemainging() + 1
+          initsRemainging.modify(_ + key)
         case None => console.error(s"could not initialize project for language ${project.getAttribute("data-language")}")
       }
     }
 
-    console.info(s"waiting for initialization of ${initsRemainging()} projects")
-
-
     val p = Promise.apply[Unit]()
+
     initsRemainging.react(remaining => {
-      console.info(s"reacting to projects RVar change to: $remaining")
-      if(remaining == 0) p.success(())
+      console.info(s"waiting for ${remaining.size} projects to initialize")
+      if(remaining.isEmpty) p.success(())
     })
 
-    p.future.onComplete(_ =>
-      console.info("promise of project initialization was completed!")
+    val fut = p.future
+
+    fut.onComplete(_ =>
+      console.info("project initialization was completed!")
     )
 
     // should there be no projects to init complete the promise right now!
-    if(initsRemainging() == 0) p.success(())
+    if(initsRemainging().isEmpty) p.success(())
 
-    p.future
-
+    fut
   }
 }
