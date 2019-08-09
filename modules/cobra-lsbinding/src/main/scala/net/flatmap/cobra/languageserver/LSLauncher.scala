@@ -62,7 +62,8 @@ object LSLauncher {
 
     println(s"""starting process with cmd="$cmd"""")
 
-    //TODO synchronize JPB Access globally!
+    // TODO synchronize JPB Access globally!
+    // TODO suppress IO for java ProcessBuilder
     val process: Process = new ProcessBuilder((cmd :: args).asJava).start()
 
     LSPProcess(process, process.getOutputStream, process.getInputStream, process.getErrorStream)
