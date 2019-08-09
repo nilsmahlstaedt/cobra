@@ -1,7 +1,8 @@
-package net.flatmap.cobra
+package net.flatmap.cobra.project
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Terminated}
 import better.files._
+import net.flatmap.cobra._
 
 import scala.util.{Failure, Properties, Success, Try}
 
@@ -34,33 +35,11 @@ class ProjectMaster(mainPID: Long, baseDir: File) extends Actor with ActorLoggin
           context.become(running(projects - deadKey))
       }
 
-    case GetSnippet(reqId, PathSource(path, startOpt, endOpt)) =>
-      getPathSnippet(baseDirStr, path, startOpt, endOpt) match {
-        case Success(content) =>
-          log.debug(s"resolved snippet $reqId")
-          sender() ! ResolvedSnippet(reqId, content)
-        case Failure(ex) =>
-          log.info(s"could not resolve snippet $reqId", ex)
-          sender() ! UnkownSnippet(reqId)
-      }
-
+    case msg@GetSnippet(_, _:PathSource) =>
+      context.actorOf(Props(new SourceLoadActor(baseDirStr))).forward(msg)
     case GetSnippet(reqId, SubsnippetSource(base, part, mode)) => // extract sub-snippet from base and answer
     case msg@GetSnippet(reqId, LogicalPath(path)) => // parse path and forward message to project actor
     case e => log.warning(s"received unkown message: $e")
-  }
-
-  def getPathSnippet(base: String, path: String, from: Option[Int], to: Option[Int]): Try[String] = {
-    for {
-      lines <- Try {
-        (base / path).lines
-      }
-      firstLine = from.getOrElse(0)
-      lastLines = to.getOrElse(lines.size)
-    } yield {
-      lines
-        .slice(firstLine, lastLines - firstLine)
-        .mkString(Properties.lineSeparator)
-    }
   }
 
 }

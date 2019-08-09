@@ -1,11 +1,11 @@
-package net.flatmap.cobra
+package net.flatmap.cobra.project
 
 import java.nio.file.{Path, Paths}
 
 import akka.actor.{Actor, ActorLogging, Props}
 import net.flatmap.cobra.languageserver.{LSInteraction, LSLauncher}
 import net.flatmap.cobra.util.FileUtils
-import org.eclipse.lsp4j.services.LanguageServer
+import net.flatmap.cobra._
 
 import scala.util.{Properties, Success, Try}
 
