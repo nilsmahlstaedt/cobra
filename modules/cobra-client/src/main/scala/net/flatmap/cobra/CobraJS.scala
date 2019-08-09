@@ -61,11 +61,20 @@ object CobraJS extends SocketApp[ServerMessage,ClientMessage]("/socket","cobra",
     case FileUpdate(other) => // TODO: differentiate here!
       send(ResetAllSnippets)
       initialize()
-    case p@ProjectInitialized(_) =>
+    case p: ProjectInitialized =>
       // decrease number of projects we are waiting for
       Console.println(p)
       Projects.initsRemainging := Projects.initsRemainging() - 1
       Console.println(Projects.initsRemainging)
+    case ResolvedSnippet(id, content) =>
+      // run insert handler
+      // handler will remove itself from openSnippetRequests
+      Code.openSnippetRequests().get(id).foreach(f => {
+        f(content)
+      })
+    case UnkownSnippet(id) => {
+      Code.openSnippetRequests().get(id).foreach(f => f("Could not load snippet!"))
+    }
   }
 
   var heartBeatAcknowledged: Boolean = true
@@ -87,7 +96,8 @@ object CobraJS extends SocketApp[ServerMessage,ClientMessage]("/socket","cobra",
       for {
         slides <- $"#slides" <<< "slides.html"
         _ <- Projects.initProjects(slides)
-        delayedSnippets <- Code.loadDelayed(slides)
+        //delayedSnippets <- Code.loadDelayed(slides)
+        _ <- Code.loadDelayed2(slides)
         options <- initialOptions.future
       } {
         val link = document.createElement("link").asInstanceOf[HTMLLinkElement]

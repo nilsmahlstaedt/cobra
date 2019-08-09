@@ -3,17 +3,16 @@ package net.flatmap.cobra
 import java.util.UUID
 
 import net.flatmap.collaboration.{Annotations, ClientInterface, EditorInterface, Operation}
-import net.flatmap.js.codemirror.{Doc,CodeMirror,Clearable,EditorChange,TextMarkerOptions,LinkedDocOptions}
-import net.flatmap.js.reveal.{Reveal, RevealEvents}
-import org.scalajs.dom.{Element, console, raw}
+import net.flatmap.js.codemirror._
+import net.flatmap.js.reveal.{Reveal, RevealEvents, _}
 import net.flatmap.js.util._
 import org.scalajs.dom.ext.Ajax
 import org.scalajs.dom.raw.HTMLElement
-import net.flatmap.js.reveal._
+import org.scalajs.dom.{Element, console, raw}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise}
 import scala.scalajs.js
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
@@ -22,6 +21,47 @@ import scala.util.matching.Regex
   * Created by martin on 12.02.16.
   */
 object Code {
+
+  // requests code snippets from server
+  val openSnippetRequests: RVar[Map[String, String => Unit]] = RVar.apply(Map.empty[String, String => Unit])
+  //val openSnippetRequests = mutable.Map.empty[String, String => Unit]
+
+  def loadDelayed2(root: NodeSeqQuery): Future[Unit] = {
+    val p = Promise.apply[Unit]()
+
+    root.query(s"code[src]:not([src^='#']):not([src^='['])").elements.foreach { code =>
+      val reqId = UUID.randomUUID().toString
+      val src = code.getAttribute("src")
+      val from = Option(code.getAttribute("from")).filter(_.nonEmpty).flatMap(_.toIntOption)
+      val to = Option(code.getAttribute("to")).filter(_.nonEmpty).flatMap(_.toIntOption)
+      val ext = src.split("\\.").last
+      val mode = Mode.modes.find(_.fileendings.contains(ext)).getOrElse(Plain)
+      code.classes += mode.name
+
+      openSnippetRequests.modify(current => current + (reqId -> ((content: String) => {
+        code.text = content
+        Code.openSnippetRequests.modify(_ - reqId)
+      })))
+
+      CobraJS.send(WatchFile(src))
+      CobraJS.send(GetSnippet(reqId, PathSource(src, from, to)))
+    }
+
+
+    openSnippetRequests.react(remaining => {
+      if(remaining.isEmpty) p.success(())
+    })
+
+    p.future.onComplete(_ =>
+      console.info("delayed snippet loading is completed!")
+    )
+
+    // should there be no projects to init complete the promise right now!
+    if(openSnippetRequests().isEmpty) p.success(())
+
+    p.future
+  }
+
   def loadDelayed(root: NodeSeqQuery): Future[Seq[String]] = Future.sequence {
     root.query(s"code[src]:not([src^='#'])").elements.map { code =>
       /*
