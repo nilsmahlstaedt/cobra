@@ -23,6 +23,7 @@ import net.flatmap.cobra.util._
 
 import scala.io
 import com.typesafe.config._
+import net.flatmap.cobra.project.ProjectMaster
 import org.webjars.WebJarAssetLocator
 
 import scala.collection.mutable
@@ -201,13 +202,13 @@ class CobraServer(val directory: File) {
   }
 
   val documents = mutable.Map.empty[String,ActorRef]
-  val projects = system.actorOf(ProjectMaster.props(PID.get(), directory))
+  val projectMaster = system.actorOf(ProjectMaster.props(PID.get(), directory))
   val fileWatchers = mutable.Map.empty[File,Source[FileUpdate,NotUsed]]
 
   def handleRequest(client: ActorRef): ClientMessage => Source[ServerMessage,NotUsed] = {
     case HeartBeat => Source.single(HeartBeat)
     case msg: ProjectMessage =>
-      projects.tell(msg, client)
+      projectMaster.tell(msg, client)
       Source.empty
     case msg@InitDoc(id,content,mode) =>
       documents.get(id).fold[Unit] {
