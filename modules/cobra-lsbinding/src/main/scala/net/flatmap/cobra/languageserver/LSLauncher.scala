@@ -1,5 +1,5 @@
 package net.flatmap.cobra.languageserver
-import java.io._
+import java.io.{BufferedReader, InputStream, InputStreamReader, OutputStream}
 import java.nio.file.Path
 
 import net.flatmap.cobra.util.PID
@@ -9,8 +9,8 @@ import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.launch.LSPLauncher
 import org.eclipse.lsp4j.services.LanguageServer
 
-import scala.jdk.CollectionConverters._
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 import scala.util.Try
 
 object LSLauncher {
@@ -44,7 +44,6 @@ object LSLauncher {
     val initializationResult = server.initialize(
       generateInitParams(pid.getOrElse(PID.get()).toInt, projectRoot, printDebugOutput)
     ).get
-    println(s"initialize result: $initializationResult")
 
     println("initialized!")
     server.initialized(new InitializedParams())
