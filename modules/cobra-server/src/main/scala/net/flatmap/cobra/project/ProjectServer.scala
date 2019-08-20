@@ -20,7 +20,7 @@ class ProjectServer(id: String, pid: Long, language: Language, rootPath: Path, s
     (for {
       ls <- LSLauncher.launch(language, rootPath, Some(pid))
     } yield {
-      val projectFiles = FileUtils.findProjectFiles(language, rootPath::srcRoots).getOrElse(Nil)
+      val projectFiles = FileUtils.findProjectFiles(language, rootPath::srcRoots).getOrElse(Nil).distinct
       val snippets = LSInteraction.analyzeProjectFiles(ls, projectFiles)
 
       ls.exit()
