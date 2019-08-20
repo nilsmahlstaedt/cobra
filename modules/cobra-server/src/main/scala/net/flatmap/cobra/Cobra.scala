@@ -1,11 +1,17 @@
 package net.flatmap.cobra
 
 import java.awt.Desktop
+import java.io.{BufferedReader, InputStream, InputStreamReader}
 import java.net.URI
+import java.nio.file.{Files, Paths}
+import java.nio.file.attribute.{PosixFileAttributes, PosixFilePermission}
 
 import better.files.File.OpenOptions
 import better.files._
 import better.files.Dsl.SymbolicOperations
+import com.typesafe.config.ConfigFactory
+
+import scala.util.{Failure, Success, Try}
 
 /**
   * Created by martin on 03.02.16.
@@ -41,12 +47,20 @@ object Cobra extends App {
 
     val conf = scala.io.Source.fromURL(getClass.getResource("/template-cobra.conf")).mkString
       .replaceAll("\\{\\s*title\\s*\\}", s""""$name"""")
-      .replaceAll("\\{\\s*lang\\s*\\}", '"' + System.getProperty("user.language") + '"')    
+      .replaceAll("\\{\\s*lang\\s*\\}", '"' + System.getProperty("user.language") + '"')
     val slides = scala.io.Source.fromURL(getClass.getResource("/template-slides.html")).mkString
       .replaceAll("\\{\\s*title\\s*\\}", name)
 
+    // TODO read filter from resources and put it into the dir
+    import better.files.InputStreamExtensions
+    val pandocFilterRes = getClass.getResourceAsStream("/projectDefFilter").byteArray
+
     (dir / "cobra.conf").createIfNotExists() < (conf)
     (dir / "slides.html").createIfNotExists() < (slides)
+    (dir / ".projectDefFilter")
+        .createFileIfNotExists()
+        .addPermission(PosixFilePermission.OTHERS_EXECUTE)
+        .writeByteArray(pandocFilterRes)
 
     println("the presentation has been successfully initialized.")
     println(s"you may start presentation with 'cobra $name'")
@@ -61,13 +75,72 @@ object Cobra extends App {
 
   val directory = if (args.isEmpty) File(".") else File(args.head)
 
+  // taken from CobraServer
+  // TODO refactor copied code from CobraServer
+  def readConfig() = ConfigFactory.parseFile(
+    (directory / "cobra.conf").toJava
+  ).withFallback(ConfigFactory.load().getConfig("cobra"))
+
+  def generateSlides(): Unit = {
+    val conf = readConfig()
+    val pandocPath = conf.getString("markdown.pandoc.path")
+
+    val filterPath = {
+      val p = Paths.get(conf.getString("markdown.filter.path"))
+
+      if(p.isAbsolute){
+        p.toString
+      }else{
+        (directory / p.toString).path.toAbsolutePath.toString
+      }
+    }
+    assert(File(filterPath).exists, s"could not find pandoc filter in path '$filterPath'")
+
+
+    val pandocArgs = List(
+      "--mathjax",
+      "--standalone",
+      "--from markdown+fenced_code_attributes",
+      "--to revealjs",
+      s"--filter ${filterPath}",
+      s"--output ${(directory/"slides.html").createFileIfNotExists().path.toString}",
+      (directory / "slides.md").path.toString
+    )
+
+    import sys.process._
+    val command = s"${pandocPath} ${pandocArgs.mkString(" ")}"
+    println(s"pandoc command: '$command'")
+    val result = command.!
+
+    assert(result == 0, s"could not generate slides from markdown. pandoc exited with $result")
+  }
+
+  def initSlides(): Unit = {
+    assert((directory / "slides.html").exists || (directory / "slides.md").exists, "no slides.html nor lsides.md found")
+
+    (
+      Try{(directory / "slides.html").lastModifiedTime},
+      Try{(directory / "slides.md").lastModifiedTime}
+    ) match {
+    //case (Failure, Failure) is guarded by assert in first line of function
+      case (Failure(_), Success(_)) => generateSlides()
+    //case (Success(_), Failure) => do nothing
+      case (Success(htime), Success(mtime)) if mtime.isAfter(htime) => generateSlides()
+    //case (Success(htime), Success(mtime)) if htime.isAfter(mtime) => // do nothing
+      case _ => ()
+
+    }
+  }
+
   { // initialize
     printLogo()
     assume(directory.exists, "could not find " + directory.toString())
     assume(directory.isDirectory, directory.toString() + " is not a directory")
     assume(directory.isReadable, "can not read " + directory.toString())
-    assume((directory / "slides.html").exists(), "no slides.html found")
     assume((directory / "cobra.conf").exists(), "no cobra.conf found")
+
+    initSlides()
+    assume((directory / "slides.html").exists(), "no slides.html found")
 
     val server = new CobraServer(directory)
     server.start()

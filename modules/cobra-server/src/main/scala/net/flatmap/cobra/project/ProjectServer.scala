@@ -57,6 +57,15 @@ class ProjectServer(id: String, pid: Long, language: Language, rootPath: Path, s
 }
 
 object ProjectServer {
+  /**
+   * generate props for a new project server
+   * @param pid cobra main thread pid (watched by LS for auto exit if dead)
+   * @param id project id
+   * @param mode language
+   * @param root project root dir
+   * @param srcRoots addition src dir roots
+   * @return
+   */
   def props(pid: Long, id: String, mode:Mode, root: String, srcRoots:List[String] = Nil): Try[Props]  = {
     for{
       language <- Try{Languages.fromString(mode.name).get}
