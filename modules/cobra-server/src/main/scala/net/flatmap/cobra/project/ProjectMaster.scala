@@ -2,13 +2,15 @@ package net.flatmap.cobra.project
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Terminated}
 import better.files._
+import fastparse._
 import net.flatmap.cobra._
 
-import scala.util.{Failure, Properties, Success, Try}
+import scala.util.{Failure, Success}
 
 class ProjectMaster(mainPID: Long, baseDir: File) extends Actor with ActorLogging {
 
   override def receive: Receive = running(Map.empty)
+
   private val baseDirStr = baseDir.path.toAbsolutePath.toString
 
   def running(projects: Map[String, ActorRef]): Receive = {
@@ -35,13 +37,36 @@ class ProjectMaster(mainPID: Long, baseDir: File) extends Actor with ActorLoggin
           context.become(running(projects - deadKey))
       }
 
-    case msg@GetSnippet(_, _:PathSource) =>
+    case msg@GetSnippet(_, _: PathSource) =>
       context.actorOf(Props(new SourceLoadActor(baseDirStr))).forward(msg)
-    case GetSnippet(reqId, SubsnippetSource(base, part, mode)) => // extract sub-snippet from base and answer
-    case msg@GetSnippet(reqId, LogicalPath(path)) => // parse path and forward message to project actor
+    case msg@GetSnippet(reqId, LogicalPath(path)) =>
+      (for{
+        (projectkey, snippetPath) <- extractPathParts(path)
+        actor <- projects.get(projectkey).orElse(projects.get(projectkey.toLowerCase()))
+      } yield {
+        (actor, GetSnippet(reqId, LogicalPath(snippetPath)))
+      }).fold(sender() ! UnkownSnippet(reqId)){
+        case (actor, msg) => actor.forward(msg)
+      }
+
     case e => log.warning(s"received unkown message: $e")
   }
 
+  private def projectParser[_: P]: P[(String, String)] = {
+    import NoWhitespace._
+
+    val projectKey = P("[" ~ CharsWhileIn(" a-zA-Z0-9").?.! ~ "]")
+    val snippetPath = P(CharsWhile(!_.isWhitespace).!)
+
+    P(Start ~ projectKey ~/ " ".rep(1) ~/ snippetPath ~ End)
+  }
+
+  private def extractPathParts(path: String): Option[(String, String)] = {
+    parse(path, projectParser(_)) match {
+      case Parsed.Success(value, index) => Some(value)
+      case _: Parsed.Failure => None
+    }
+  }
 }
 
 object ProjectMaster {

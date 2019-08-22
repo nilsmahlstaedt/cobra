@@ -8,7 +8,7 @@ import net.flatmap.js.reveal.{Reveal, RevealEvents, _}
 import net.flatmap.js.util._
 import org.scalajs.dom.ext.Ajax
 import org.scalajs.dom.raw.HTMLElement
-import org.scalajs.dom.{Element, console, raw}
+import org.scalajs.dom.{Element, console, raw, document}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -29,7 +29,7 @@ object Code {
   def loadDelayed2(root: NodeSeqQuery): Future[Unit] = {
     val p = Promise.apply[Unit]()
 
-    root.query(s"code[src]:not([src^='#']):not([src^='['])").elements.foreach { code =>
+    root.query("code[src]:not([src^='#']):not([src^='['])").elements.foreach { code =>
       val reqId = UUID.randomUUID().toString
       val src = code.getAttribute("src")
       val from = Option(code.getAttribute("from")).filter(_.nonEmpty).flatMap(_.toIntOption)
@@ -45,6 +45,20 @@ object Code {
 
       CobraJS.send(WatchFile(src))
       CobraJS.send(GetSnippet(reqId, PathSource(src, from, to)))
+    }
+
+    root.query("[src^='[']").elements.foreach {elem =>
+      val reqId = UUID.randomUUID().toString
+      val src = elem.getAttribute("src")
+      val from = Option(code.getAttribute("from")).filter(_.nonEmpty).flatMap(_.toIntOption)
+      val to = Option(code.getAttribute("to")).filter(_.nonEmpty).flatMap(_.toIntOption)
+
+      //TODO build code object with all atributes of the original object (but simplyfy the content to just basic text!)
+      val parent = elem.parentNode
+      val newElem = org.scalajs.dom.document.createElement("code")
+      newElem.a
+
+      openS
     }
 
     // fulfill promise if no snippet remains to be inserted
