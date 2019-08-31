@@ -11,6 +11,14 @@ import scala.util.{Properties, Success, Try}
 
 class ProjectServer(id: String, pid: Long, language: Language, mode:Mode, rootPath: Path, srcRoots: List[Path]) extends Actor with ActorLogging {
 
+  implicit class IfEmptyList[A](l: List[A]){
+    def orIfEmpty(other: A): List[A] = orIfEmpty(List(other))
+    def orIfEmpty(other: List[A]): List[A] = if(l.isEmpty){
+      other
+    }else{
+      l
+    }
+  }
 
   override def preStart(): Unit = {
     super.preStart()
@@ -20,7 +28,7 @@ class ProjectServer(id: String, pid: Long, language: Language, mode:Mode, rootPa
     (for {
       ls <- LSLauncher.launch(language, rootPath, Some(pid))
     } yield {
-      val projectFiles = FileUtils.findProjectFiles(language, rootPath::srcRoots).getOrElse(Nil).distinct
+      val projectFiles = FileUtils.findProjectFiles(language, srcRoots.orIfEmpty(rootPath)).getOrElse(Nil).distinct
       val snippets = LSInteraction.analyzeProjectFiles(ls, projectFiles)
 
       ls.exit()
@@ -66,14 +74,20 @@ object ProjectServer {
    * @param id project id
    * @param mode language
    * @param root project root dir
-   * @param srcRoots addition src dir roots
+   * @param srcRoots src dir roots
+   *                 (will be resolved relative to project root if given in relative form)
    * @return
    */
   def props(pid: Long, id: String, mode:Mode, root: String, srcRoots:List[String] = Nil): Try[Props]  = {
     for{
       language <- Try{Languages.fromString(mode.name).get}
-      rootPath <- Try{Paths.get(root)}
-      srcRootPaths = srcRoots.map(sr => Try{Paths.get(sr)}).collect{
+      rootPath <- Try{Paths.get(root).toAbsolutePath}
+      srcRootPaths = srcRoots.map(sr => Try{
+       Paths.get(sr) match {
+         case p if p.isAbsolute => p
+         case p => rootPath.resolve(p)
+       }
+      }).collect{
         case Success(p) => p
       }
     } yield {
