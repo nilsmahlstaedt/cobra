@@ -54,6 +54,21 @@ lazy val server = (project in file("modules/cobra-server"))
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % "test"
   ).dependsOn(commonJVM, clientAssets, lsbinding)
 
+lazy val client = (project in file("modules/cobra-client"))
+  .enablePlugins(ScalaJSPlugin)
+  .settings(commonSettings :_*)
+  .settings(
+    target := target.value / "js",
+    name := "cobra.client.js",
+    moduleName := "cobra-client",
+    artifactPath in (Compile,fastOptJS) :=
+      ((crossTarget in fastOptJS).value /
+        ((moduleName in fastOptJS).value + ".js")),
+    artifactPath in (Compile,fullOptJS) := (artifactPath in (Compile,fastOptJS)).value,
+    skip in packageJSDependencies := false,
+    scalaJSUseMainModuleInitializer := true
+  ).dependsOn(reveal,codemirror,utilJS,commonJS)
+
 lazy val clientAssets  = (project in file("modules/cobra-client"))
   .enablePlugins(SbtWeb)
   .settings(commonSettings :_*)
@@ -70,21 +85,6 @@ lazy val clientAssets  = (project in file("modules/cobra-client"))
     libraryDependencies ++= Seq(
       "org.webjars.npm" % "octicons" % "8.5.0")
   ).dependsOn(client)
-
-lazy val client = (project in file("modules/cobra-client"))
-  .enablePlugins(ScalaJSPlugin)
-  .settings(commonSettings :_*)
-  .settings(
-    target := target.value / "js",
-    name := "cobra.client.js",
-    moduleName := "cobra-client",
-    artifactPath in (Compile,fastOptJS) :=
-      ((crossTarget in fastOptJS).value /
-        ((moduleName in fastOptJS).value + ".js")),
-    artifactPath in (Compile,fullOptJS) := (artifactPath in (Compile,fastOptJS)).value,
-    skip in packageJSDependencies := false,
-    scalaJSUseMainModuleInitializer := true
-  ).dependsOn(reveal,codemirror,utilJS,commonJS)
 
 lazy val utilJS = (project in file("modules/js-util"))
   .enablePlugins(ScalaJSPlugin)
