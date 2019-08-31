@@ -8,7 +8,6 @@ import scala.concurrent.{Future, Promise}
 
 object Projects {
 
-  //TODO replace with a set of project id's?
   val initsRemainging: RVar[Set[String]] = RVar.apply(Set.empty)
 
   def initProjects(root: NodeSeqQuery): Future[Unit] = {
