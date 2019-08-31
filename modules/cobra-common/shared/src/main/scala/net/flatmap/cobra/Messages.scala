@@ -22,8 +22,7 @@ case class InitProject(id: String, mode: Mode, root: String, srcRoots: List[Stri
 case class ProjectInitialized(id: String) extends ServerMessage with ProjectMessage
 
 case class GetSnippet(id: String, source: SnippetSource) extends ClientMessage with ProjectMessage
-// TODO add a mode option to the snippet response
-case class ResolvedSnippet(id: String, content: String) extends ServerMessage with ProjectMessage
+case class ResolvedSnippet(id: String, content: String, mode: Option[Mode]) extends ServerMessage with ProjectMessage
 case class UnkownSnippet(id: String, msg: String) extends ServerMessage with ProjectMessage
 
 sealed trait SnippetSource

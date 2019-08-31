@@ -26,7 +26,7 @@ class SourceLoadActor(basePath: String) extends Actor with ActorLogging {
       }) match {
         case Success(content) =>
           log.debug(s"resolved snippet $reqId")
-          sender() ! ResolvedSnippet(reqId, content)
+          sender() ! ResolvedSnippet(reqId, content, None)
         case Failure(ex) =>
           log.info(s"could not resolve snippet $reqId")
           log.info(ex.toString)

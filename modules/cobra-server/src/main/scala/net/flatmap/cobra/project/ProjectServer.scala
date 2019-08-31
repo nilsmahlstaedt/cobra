@@ -9,7 +9,7 @@ import net.flatmap.cobra._
 
 import scala.util.{Properties, Success, Try}
 
-class ProjectServer(id: String, pid: Long, language: Language, rootPath: Path, srcRoots: List[Path]) extends Actor with ActorLogging {
+class ProjectServer(id: String, pid: Long, language: Language, mode:Mode, rootPath: Path, srcRoots: List[Path]) extends Actor with ActorLogging {
 
 
   override def preStart(): Unit = {
@@ -51,7 +51,9 @@ class ProjectServer(id: String, pid: Long, language: Language, rootPath: Path, s
             reqId,
             SnippetResolver
               .getSourceLines(snippet)
-              .mkString(Properties.lineSeparator))
+              .mkString(Properties.lineSeparator),
+            Some(mode)
+          )
         })
     case e => log.error(s"received unknown message: $e")
   }
@@ -75,7 +77,7 @@ object ProjectServer {
         case Success(p) => p
       }
     } yield {
-      Props(new ProjectServer(id, pid, language,rootPath, srcRootPaths))
+      Props(new ProjectServer(id, pid, language, mode, rootPath, srcRootPaths))
     }
   }
 }

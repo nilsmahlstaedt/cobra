@@ -24,7 +24,7 @@ import scala.util.matching.Regex
 object Code {
 
   // requests code snippets from server
-  val openSnippetRequests: RVar[Map[String, String => Unit]] = RVar.apply(Map.empty[String, String => Unit])
+  val openSnippetRequests: RVar[Map[String, (String, Option[Mode]) => Unit]] = RVar.apply(Map.empty)
   //val openSnippetRequests = mutable.Map.empty[String, String => Unit]
 
   def simplyfySnippets(root: NodeSeqQuery): Unit = {
@@ -86,7 +86,8 @@ object Code {
         PathSource(src, from, to)
       }
 
-      openSnippetRequests.modify(_ + (reqId -> ((content: String) => {
+      openSnippetRequests.modify(_ + (reqId -> ((content: String, mode:Option[Mode]) => {
+        mode.foreach(m => code.classes += m.name)
         code.text = content
         Code.openSnippetRequests.modify(_ - reqId)
       })))

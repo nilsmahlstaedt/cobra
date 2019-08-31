@@ -64,14 +64,14 @@ object CobraJS extends SocketApp[ServerMessage,ClientMessage]("/socket","cobra",
     case ProjectInitialized(key) =>
       // decrease number of projects we are waiting for
       Projects.initsRemainging.modify(_ - key)
-    case ResolvedSnippet(id, content) =>
+    case ResolvedSnippet(id, content, mode) =>
       // run insert handler
       // handler will remove itself from openSnippetRequests
       Code.openSnippetRequests().get(id).foreach(f => {
-        f(content)
+        f(content, mode)
       })
     case UnkownSnippet(id, msg) => {
-      Code.openSnippetRequests().get(id).foreach(f => f(s"Could not load snippet\n$msg"))
+      Code.openSnippetRequests().get(id).foreach(f => f(s"Could not load snippet\n$msg", Some(Plain)))
     }
   }
 
