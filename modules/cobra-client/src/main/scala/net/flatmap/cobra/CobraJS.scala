@@ -70,8 +70,8 @@ object CobraJS extends SocketApp[ServerMessage,ClientMessage]("/socket","cobra",
       Code.openSnippetRequests().get(id).foreach(f => {
         f(content)
       })
-    case UnkownSnippet(id) => {
-      Code.openSnippetRequests().get(id).foreach(f => f("Could not load snippet!"))
+    case UnkownSnippet(id, msg) => {
+      Code.openSnippetRequests().get(id).foreach(f => f(s"Could not load snippet\n$msg"))
     }
   }
 
@@ -94,9 +94,10 @@ object CobraJS extends SocketApp[ServerMessage,ClientMessage]("/socket","cobra",
       for {
         slides <- $"#slides" <<< "slides.html"
         projects = Projects.initProjects(slides)
+        _ = Code.simplyfySnippets(slides)
+        _ <- projects
         snippets = Code.loadDelayed2(slides)
         //delayedSnippets <- Code.loadDelayed(slides)
-        _ <- projects
         _ <- snippets
         options <- initialOptions.future
       } {
