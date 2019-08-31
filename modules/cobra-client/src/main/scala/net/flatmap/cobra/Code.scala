@@ -8,7 +8,8 @@ import net.flatmap.js.reveal.{Reveal, RevealEvents, _}
 import net.flatmap.js.util._
 import org.scalajs.dom.ext.Ajax
 import org.scalajs.dom.raw.HTMLElement
-import org.scalajs.dom.{Element, console, raw, document}
+import org.scalajs.dom.{Element, console, document, raw}
+import org.w3c.dom.Attr
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -26,10 +27,51 @@ object Code {
   val openSnippetRequests: RVar[Map[String, String => Unit]] = RVar.apply(Map.empty[String, String => Unit])
   //val openSnippetRequests = mutable.Map.empty[String, String => Unit]
 
+  def simplyfySnippets(root: NodeSeqQuery): Unit = {
+    root.query("[src^='[']").elements.foreach{elem =>
+      val childClasses = elem.query("pre[class~='sourceCode']")
+        .elements
+        .map(c => c.classList.toString.split(' ').toSet)
+        .fold(Set.empty[String])((acc, v) => acc ++ v)
+
+      console.log(s"found ${childClasses.size} child classes")
+
+      val attributes: Seq[(String, String)] = elem.attributes.toList
+      val content = elem.textContent
+
+      val replacement = document.createElement("code")
+
+      /*
+      for some reason a foreach fails with:
+        found   : (String, String) => Unit
+        required: ((String, String)) => ?
+       */
+      for((k,v) <- attributes){
+        replacement.setAttribute(k,v)
+      }
+
+      childClasses.foreach(replacement.classList.add)
+      replacement.text = if(content.isEmpty){
+        "no code loaded"
+      }else content
+
+      console.log(replacement)
+
+      elem.insertAfter(replacement)
+      elem.remove()
+    }
+
+
+    //console.log("debugging all src elements!")
+    //root.query("[src]").elements.foreach(console.log(_))
+  }
+
   def loadDelayed2(root: NodeSeqQuery): Future[Unit] = {
     val p = Promise.apply[Unit]()
 
-    root.query("code[src]:not([src^='#']):not([src^='['])").elements.foreach { code =>
+    root.query("code[src]:not([src^='#'])").elements.foreach { code =>
+      console.log(s"loading snippet from html: $code")
+
       val reqId = UUID.randomUUID().toString
       val src = code.getAttribute("src")
       val from = Option(code.getAttribute("from")).filter(_.nonEmpty).flatMap(_.toIntOption)
@@ -38,28 +80,34 @@ object Code {
       val mode = Mode.modes.find(_.fileendings.contains(ext)).getOrElse(Plain)
       code.classes += mode.name
 
+      val msg = if(src.startsWith("[")){
+        LogicalPath(src)
+      }else{
+        PathSource(src, from, to)
+      }
+
       openSnippetRequests.modify(_ + (reqId -> ((content: String) => {
         code.text = content
         Code.openSnippetRequests.modify(_ - reqId)
       })))
 
       CobraJS.send(WatchFile(src))
-      CobraJS.send(GetSnippet(reqId, PathSource(src, from, to)))
+      CobraJS.send(GetSnippet(reqId, msg))
     }
 
-    root.query("[src^='[']").elements.foreach {elem =>
-      val reqId = UUID.randomUUID().toString
-      val src = elem.getAttribute("src")
-      val from = Option(code.getAttribute("from")).filter(_.nonEmpty).flatMap(_.toIntOption)
-      val to = Option(code.getAttribute("to")).filter(_.nonEmpty).flatMap(_.toIntOption)
-
-      //TODO build code object with all atributes of the original object (but simplyfy the content to just basic text!)
-      val parent = elem.parentNode
-      val newElem = org.scalajs.dom.document.createElement("code")
-      newElem.a
-
-      openS
-    }
+//    root.query("[src^='[']").elements.foreach {elem =>
+//      val reqId = UUID.randomUUID().toString
+//      val src = elem.getAttribute("src")
+//      val from = Option(code.getAttribute("from")).filter(_.nonEmpty).flatMap(_.toIntOption)
+//      val to = Option(code.getAttribute("to")).filter(_.nonEmpty).flatMap(_.toIntOption)
+//
+//      //TODO build code object with all atributes of the original object (but simplyfy the content to just basic text!)
+//      val parent = elem.parentNode
+//      val newElem = org.scalajs.dom.document.createElement("code")
+//      newElem.a
+//
+//      openS
+//    }
 
     // fulfill promise if no snippet remains to be inserted
     openSnippetRequests.react(remaining => {
