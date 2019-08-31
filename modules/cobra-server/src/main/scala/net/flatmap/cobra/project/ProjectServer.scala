@@ -44,7 +44,7 @@ class ProjectServer(id: String, pid: Long, language: Language, rootPath: Path, s
   def running(snippets: Map[String, Snippet]): Receive = {
     case InitProject(`id`, _, _, _) => sender() ! ProjectInitialized(id)
     case GetSnippet(reqId, LogicalPath(path)) => //path is already adjusted by project master!
-      log.info(snippets.keys.toString())
+      //log.info(snippets.keys.toList.sorted.mkString("\n"))
       snippets.get(path)
         .fold(sender() ! UnkownSnippet(reqId, "path not found"))(snippet => {
           sender() ! ResolvedSnippet(
