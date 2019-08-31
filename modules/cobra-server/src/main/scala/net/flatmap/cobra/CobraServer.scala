@@ -202,7 +202,7 @@ class CobraServer(val directory: File) {
   }
 
   val documents = mutable.Map.empty[String,ActorRef]
-  val projectMaster = system.actorOf(ProjectMaster.props(PID.get(), directory))
+  val projectMaster = system.actorOf(ProjectMaster.props(PID.get(), directory), "projectmaster")
   val fileWatchers = mutable.Map.empty[File,Source[FileUpdate,NotUsed]]
 
   def handleRequest(client: ActorRef): ClientMessage => Source[ServerMessage,NotUsed] = {
@@ -210,7 +210,7 @@ class CobraServer(val directory: File) {
     case msg: ProjectMessage =>
       projectMaster.tell(msg, client)
       Source.empty
-    case msg@InitDoc(id,content,mode) =>
+    case msg@InitDoc(id,_,mode) =>
       documents.get(id).fold[Unit] {
         log.info(s"initializing new ${mode.name} document '$id'")
         val doc = system.actorOf(SnippetServer.props(env), id)
