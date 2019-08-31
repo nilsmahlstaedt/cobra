@@ -23,7 +23,12 @@ object ProjectAnalyzer {
       ls <- LSLauncher.launch(project.language, project.projectRoot)
       snippets <- withResource(ClosableLS(ls))(_ => {
         FileUtils
-          .findProjectFiles(project.language, project.projectRoot::project.srcRoots)
+          .findProjectFiles(project.language,
+            if(project.srcRoots.isEmpty){
+              List(project.projectRoot)
+            }else{
+              project.srcRoots
+            })
           .map(LSInteraction.analyzeProjectFiles(ls, _))
       })
     } yield {
