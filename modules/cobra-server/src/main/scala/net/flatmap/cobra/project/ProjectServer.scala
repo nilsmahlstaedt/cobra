@@ -34,7 +34,18 @@ class ProjectServer(id: String, pid: Long, language: Language, mode:Mode, rootPa
       ls.exit()
 
       log.info(s"ProjectServer for project $id is initialized")
-      context.become(running(snippets.map(s => (s"${s.parent.getOrElse("")}.${s.name}",s)).toMap))
+      val snippetmap: Map[String, Snippet] = snippets.map(s => {
+        val parent = s.parent.getOrElse("").replaceAll("/", ".")
+        val name = s.name
+
+        (s"$parent$name", s)
+      }).foldLeft(Map.empty[String, Snippet])({
+        case (acc,(p, s)) =>
+          if (acc.get(p).nonEmpty) println(s"overwriting: $p (${acc(p).kind.getValue} -> ${s.kind.getValue})")
+          acc + (p -> s)
+      })
+
+      context.become(running(snippetmap))
     }) recover {
       case e: Throwable =>
         log.error(e, s"could not start project actor for project '$id'")
@@ -52,7 +63,11 @@ class ProjectServer(id: String, pid: Long, language: Language, mode:Mode, rootPa
   def running(snippets: Map[String, Snippet]): Receive = {
     case InitProject(`id`, _, _, _) => sender() ! ProjectInitialized(id)
     case GetSnippet(reqId, LogicalPath(path)) => //path is already adjusted by project master!
-      //log.info(snippets.keys.toList.sorted.mkString("\n"))
+
+      log.info(snippets.toList.map{
+        case (p, s) => s"$p (${s.endLine-s.startLine+1}) (${s.startLine+1}-${s.endLine+1})" //keys.toList.sorted.mkString("\n")
+      }.sorted.mkString("\n"))
+
       snippets.get(path)
         .fold(sender() ! UnkownSnippet(reqId, "path not found"))(snippet => {
           sender() ! ResolvedSnippet(
