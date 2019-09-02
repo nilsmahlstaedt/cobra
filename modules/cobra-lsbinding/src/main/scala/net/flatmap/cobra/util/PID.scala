@@ -1,9 +1,8 @@
 package net.flatmap.cobra.util
+import java.lang.management.ManagementFactory
 
 object PID {
   def get(): Long = {
-    import java.lang.management.ManagementFactory
-    import java.lang.management.RuntimeMXBean
     val bean = ManagementFactory.getRuntimeMXBean
 
     // Get name representing the running Java virtual machine.

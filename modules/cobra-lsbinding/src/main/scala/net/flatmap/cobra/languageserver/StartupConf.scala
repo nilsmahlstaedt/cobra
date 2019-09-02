@@ -6,7 +6,7 @@ case class StartupConf(language: String, binary: String, args: List[String])
 
 
 object StartupConf {
-  // default lang server for testing
+  // default lang server
   val Haskell: StartupConf = BindingConfig.languageServers.getOrElse("haskell", StartupConf("haskell", "hie-wrapper", List("--lsp")))
   val Scala: StartupConf = BindingConfig.languageServers.getOrElse("scala", StartupConf("scala", "metals", Nil))
 
