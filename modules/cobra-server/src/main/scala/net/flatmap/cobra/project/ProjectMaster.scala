@@ -117,40 +117,15 @@ object ProjectMaster {
     def projectKey: P[Option[PathDetail]] = key(projectAssociation)
     def typeKey: P[Option[PathDetail]] = key(typeBound)
 
-    /*
-    i know this part is ugly, but i currently have no better way to express the behaviour of:
-
-    for a set of keys K
-    while K contains keys:
-      parse for any of the keys
-      on success:
-        (1) save the value for later return
-        remove the matched key from K
-      on failure:
-        (no key in the set could be parsed)
-        break out of the loop
-
-    return all values saved in step (1)
-
-    trying to parse a list of any of the keys does not make sure,
-    that each key is parsed at most once!
-     */
-    def keys = (
-      projectKey ~ typeKey |
-        typeKey ~ projectKey
-      ).map{
-      case (a,b) => List(a,b).filter(_.isDefined).map(_.get)
-    }
-
     def snippetPath: P[String] = P(CharsWhile(!_.isWhitespace).!)
 
-    P(Start ~ keys ~ snippetPath ~ End)
+    P(Start ~ projectKey ~ typeKey ~ snippetPath ~ End)
       .map{
-        case (keys, path) => Path(path,keys)
+        case (pk, tk, path) => Path(path, pk.toList ++ tk.toList)
       }
   }
 
-  def extractPathParts(path: String): Either[String, (String, String)] = {
+  def extractPathParts(path: String): Either[String, Path] = {
         parse(path, projectParser(_)) match {
           case Parsed.Success(value, _) => Right(value)
           case Parsed.Failure(label, index, extra) => Left(s"could not parse path $label at col $index")
