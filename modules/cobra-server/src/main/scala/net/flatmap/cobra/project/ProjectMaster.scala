@@ -7,6 +7,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props, Terminated}
 import better.files._
 import fastparse._
 import net.flatmap.cobra._
+import org.eclipse.lsp4j.SymbolKind
 
 import scala.util.{Failure, Success, Try}
 
@@ -70,20 +71,86 @@ class ProjectMaster(mainPID: Long, baseDir: File) extends Actor with ActorLoggin
 object ProjectMaster {
   def props(mainPID: Long, baseDir: File): Props = Props(new ProjectMaster(mainPID, baseDir))
 
-  private def projectParser[_: P]: P[(String, String)] = {
+  sealed abstract class PathDetail
+  case class ProjectAssociation(project: String) extends PathDetail
+  case class TypeBound(typ: SymbolKind) extends PathDetail
+
+  case class Path(path: String, details: List[PathDetail]){
+    def isAbsolute: Boolean = path.startsWith("..")
+  }
+
+
+  /**
+   * parses a typename as defined in [[TypeNames.names]] in case sensitive form
+   *
+   * should the input not match any of the names directly, it is again parsed case insensitive
+   * in this case all words from above, that contain more than just a capitalized first character are excluded
+   * after that the input is lower cased and then the first letter is capitalized
+   *
+   * the resulting string from both parsers is converted into the Enum Value ([[SymbolKind]]) that it represents
+   * in a safe manner.
+   */
+  private def typeBound[_:P]: P[TypeBound] = {
+    def nameCS = StringIn(TypeNames.names:_*).!
+
+    def fixableNames = StringInIgnoreCase(TypeNames.singleWords:_*).!.map(_.toLowerCase.capitalize)
+
+    def name: P[String] = nameCS | fixableNames
+
+    P(name)
+      .map(n => Try(SymbolKind.valueOf(n)))
+      .filter(_.isSuccess)
+      .map(_.get)
+      .map(TypeBound.apply)
+  }
+
+  private def projectAssociation[_:P]: P[ProjectAssociation] = {
+    P(CharsWhile(_.isLetterOrDigit).!)
+      .map(ProjectAssociation.apply)
+  }
+
+  private def projectParser[_: P]: P[Path] = {
     import SingleLineWhitespace._
 
-    def projectKey: P[String] = P("[" ~ CharsWhile(_.isLetterOrDigit).! ~ "]")
+    def key[V](content: P[V]): P[Option[V]] = P("[" ~ content  ~ "]").?
+
+    def projectKey: P[Option[PathDetail]] = key(projectAssociation)
+    def typeKey: P[Option[PathDetail]] = key(typeBound)
+
+    /*
+    i know this part is ugly, but i currently have no better way to express the behaviour of:
+
+    for a set of keys K
+    while K contains keys:
+      parse for any of the keys
+      on success:
+        (1) save the value for later return
+        remove the matched key from K
+      on failure:
+        (no key in the set could be parsed)
+        break out of the loop
+
+    return all values saved in step (1)
+
+    trying to parse a list of any of the keys does not make sure,
+    that each key is parsed at most once!
+     */
+    def keys = (
+      projectKey ~ typeKey |
+        typeKey ~ projectKey
+      ).map{
+      case (a,b) => List(a,b).filter(_.isDefined).map(_.get)
+    }
+
     def snippetPath: P[String] = P(CharsWhile(!_.isWhitespace).!)
 
-    P(Start ~ projectKey ~ snippetPath ~ End)
+    P(Start ~ keys ~ snippetPath ~ End)
+      .map{
+        case (keys, path) => Path(path,keys)
+      }
   }
 
   def extractPathParts(path: String): Either[String, (String, String)] = {
-//    Try(URLDecoder.decode(path, Charset.forName("utf-8").name()))
-//      .toEither
-//      .left.map(_ => s"could not URL decode input '$path'")
-//      .flatMap{ decoded =>
         parse(path, projectParser(_)) match {
           case Parsed.Success(value, _) => Right(value)
           case Parsed.Failure(label, index, extra) => Left(s"could not parse path $label at col $index")
