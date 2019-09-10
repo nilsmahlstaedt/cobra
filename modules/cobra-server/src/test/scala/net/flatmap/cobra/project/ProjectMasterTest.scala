@@ -27,6 +27,27 @@ class ProjectMasterTest extends FlatSpec with Matchers {
     ProjectMaster.extractPathParts("[t:] foobar") shouldBe a[Left[_, _]]
   }
 
+  it should "allow whitespace between defining parts in keys" in {
+    ProjectMaster.extractPathParts("[p:path] path") shouldBe Right(Path("path", ProjectAssociation("path")))
+    ProjectMaster.extractPathParts("[  p    :path] path") shouldBe Right(Path("path", ProjectAssociation("path")))
+    ProjectMaster.extractPathParts("[  p :path] path") shouldBe Right(Path("path", ProjectAssociation("path")))
+  }
+
+  it should "not allow duplicate keys" in {
+    ProjectMaster.extractPathParts("[p:key][p:key] foobar") shouldBe a[Left[_, _]]
+    ProjectMaster.extractPathParts("[t:key][t:key] foobar") shouldBe a[Left[_, _]]
+  }
+
+  it should "only allow type bounds defined in the LSP spec" in {
+    ProjectMaster.extractPathParts("[t:File] path") shouldBe Right(Path("path", TypeBound(SymbolKind.File)))
+    ProjectMaster.extractPathParts("[t:file] path") shouldBe Right(Path("path", TypeBound(SymbolKind.File)))
+    ProjectMaster.extractPathParts("[t:FILE] path") shouldBe Right(Path("path", TypeBound(SymbolKind.File)))
+    ProjectMaster.extractPathParts("[t:EnumMember] path") shouldBe Right(Path("path", TypeBound(SymbolKind.EnumMember)))
+
+    ProjectMaster.extractPathParts("[t:Enummember] path") shouldBe a[Left[_, _]]
+    ProjectMaster.extractPathParts("[t:enumMember] path") shouldBe a[Left[_, _]]
+  }
+
   it should "not allow keys without tag" in {
     ProjectMaster.extractPathParts("[key] foobar") shouldBe a[Left[_, _]]
   }
