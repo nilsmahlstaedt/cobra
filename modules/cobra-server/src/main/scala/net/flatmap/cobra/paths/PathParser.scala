@@ -1,7 +1,6 @@
 package net.flatmap.cobra.paths
 
 import fastparse._
-import net.flatmap.cobra.project.TypeNames
 import org.eclipse.lsp4j.SymbolKind
 
 import scala.util.Try
@@ -23,17 +22,7 @@ trait PathParser {
 
     //def fixableNames = StringInIgnoreCase(TypeNames.singleWords:_*).!.map(_.toLowerCase.capitalize)
 
-    def name: P[String] =
-      TypeNames.names
-        .map(s =>
-          P(IgnoreCase(s)).map(_ => s)
-        ) match {
-        case Nil => Fail //can parse if no words are allowed
-        case x::Nil => x
-        case x::xs => xs.foldLeft(x)((acc, p) => P(acc | p))
-      }
-
-    //def name: P[String] = nameCS | fixableNames
+    def name: P[String] = P(StringInIgnoreCase(TypeNames.names:_*).!).map(s => TypeNames.recapitalize(s.toLowerCase))
 
     P(name)
       .map(n => Try(SymbolKind.valueOf(n)))
