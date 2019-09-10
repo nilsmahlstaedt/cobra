@@ -1,4 +1,4 @@
-package net.flatmap.cobra.project
+package net.flatmap.cobra.paths
 
 /**
  * string values of symbol type names as defined in
@@ -68,6 +68,10 @@ object TypeNames {
     "TypeParameter"
   )
 
-  val singleWords = names.filter(s => s.headOption.exists(_.isUpper) && s.tail.forall(_.isLower))
-  val multiWords = names.diff(singleWords)
+  val recapitalize: PartialFunction[String, String] = {
+   names.map(n => n.toLowerCase -> n).toMap
+  }
+
+  //val singleWords = names.filter(s => s.headOption.exists(_.isUpper) && s.tail.forall(_.isLower))
+  //val multiWords = names.diff(singleWords)
 }
