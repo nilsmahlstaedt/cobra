@@ -7,6 +7,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props, Terminated}
 import better.files._
 import fastparse._
 import net.flatmap.cobra._
+import net.flatmap.cobra.project.ProjectMaster.{Path, ProjectAssociation}
 import org.eclipse.lsp4j.SymbolKind
 
 import scala.util.{Failure, Success, Try}
@@ -49,14 +50,15 @@ class ProjectMaster(mainPID: Long, baseDir: File) extends Actor with ActorLoggin
       context.actorOf(Props(new SourceLoadActor(baseDirStr))).forward(msg)
     case GetSnippet(reqId, LogicalPath(path)) =>
       val t: Either[String, (ActorRef, GetSnippet)] = ProjectMaster.extractPathParts(path).flatMap{
-        case (projectkey,snippetPath) =>
-          projects.get(projectkey)
-            .orElse(projects.get(projectkey.toLowerCase())) match {
-            case None => Left(s"could not find registred project for key: '$projectkey'")
-            case Some(ref) =>
-              log.debug(s"found projectactor $ref for key $projectkey")
-              Right((ref, GetSnippet(reqId, LogicalPath(snippetPath))))
-          }
+        case p: Path => ???
+          // TODO implement a dedicated search function!
+//          projects.get(projectkey)
+//            .orElse(projects.get(projectkey.toLowerCase())) match {
+//            case None => Left(s"could not find registred project for key: '$projectkey'")
+//            case Some(ref) =>
+//              log.debug(s"found projectactor $ref for key $projectkey")
+//              Right((ref, GetSnippet(reqId, LogicalPath(snippetPath))))
+//          }
       }
 
       t.fold(
@@ -77,6 +79,18 @@ object ProjectMaster {
 
   case class Path(path: String, details: List[PathDetail]){
     def isAbsolute: Boolean = path.startsWith("..")
+
+    def projectAssociation(): Option[ProjectAssociation] = details.collectFirst {
+        case x: ProjectAssociation => x
+      }
+
+    def typeBound(): Option[TypeBound] = details.collectFirst{
+      case x: TypeBound => x
+    }
+  }
+
+  object Path {
+    def apply(path: String, details: PathDetail*) = new Path(path, details.toList)
   }
 
 
@@ -91,11 +105,22 @@ object ProjectMaster {
    * in a safe manner.
    */
   private def typeBound[_:P]: P[TypeBound] = {
-    def nameCS = StringIn(TypeNames.names:_*).!
+    //import NoWhitespace._
+    //def nameCS = StringIn(TypeNames.names:_*).!
 
-    def fixableNames = StringInIgnoreCase(TypeNames.singleWords:_*).!.map(_.toLowerCase.capitalize)
+    //def fixableNames = StringInIgnoreCase(TypeNames.singleWords:_*).!.map(_.toLowerCase.capitalize)
 
-    def name: P[String] = nameCS | fixableNames
+    def name: P[String] =
+      TypeNames.names
+      .map(s =>
+        P(IgnoreCase(s)).map(_ => s)
+      ) match {
+        case Nil => Fail //can parse if no words are allowed
+        case x::Nil => x
+        case x::xs => xs.foldLeft(x)((acc, p) => P(acc | p))
+      }
+
+    //def name: P[String] = nameCS | fixableNames
 
     P(name)
       .map(n => Try(SymbolKind.valueOf(n)))
@@ -112,10 +137,10 @@ object ProjectMaster {
   private def projectParser[_: P]: P[Path] = {
     import SingleLineWhitespace._
 
-    def key[V](content: P[V]): P[Option[V]] = P("[" ~ content  ~ "]").?
+    def key[V](tagChar: String, content: P[V]): P[Option[V]] = P(("[" ~ tagChar ~ ":" ~ content  ~ "]").?)
 
-    def projectKey: P[Option[PathDetail]] = key(projectAssociation)
-    def typeKey: P[Option[PathDetail]] = key(typeBound)
+    def projectKey: P[Option[PathDetail]] = key("p", projectAssociation)
+    def typeKey: P[Option[PathDetail]] = key("t", typeBound)
 
     def snippetPath: P[String] = P(CharsWhile(!_.isWhitespace).!)
 

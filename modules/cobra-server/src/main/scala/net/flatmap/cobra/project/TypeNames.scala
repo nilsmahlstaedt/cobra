@@ -69,4 +69,5 @@ object TypeNames {
   )
 
   val singleWords = names.filter(s => s.headOption.exists(_.isUpper) && s.tail.forall(_.isLower))
+  val multiWords = names.diff(singleWords)
 }
