@@ -1,5 +1,7 @@
 package net.flatmap.cobra.paths
 
+import fastparse._
+
 /**
  * string values of symbol type names as defined in
  * https://microsoft.github.io/language-server-protocol/specification
@@ -38,8 +40,42 @@ object TypeNames {
 }
    */
 
+  def namesParser[_: P]: P[String] = {
+    import NoWhitespace._
+    // P(StringInIgnoreCase(names:_*) sadly does not work in this case as it fails to compile with:
+    // Function can only accept constant singleton type
 
-  val names = List(
+    P(StringInIgnoreCase(
+      "File",
+      "Module",
+      "Namespace",
+      "Package",
+      "Class",
+      "Method",
+      "Property",
+      "Field",
+      "Constructor",
+      "Enum",
+      "Interface",
+      "Function",
+      "Variable",
+      "Constant",
+      "String",
+      "Number",
+      "Boolean",
+      "Array",
+      "Object",
+      "Key",
+      "Null",
+      "EnumMember",
+      "Struct",
+      "Event",
+      "Operator",
+      "TypeParameter"
+    ).! ~ &(CharPred(!_.isLetter) | End)).map(recapitalize).filter(_.isDefined).map(_.get)
+  }
+
+  val names = Set(
     "File",
     "Module",
     "Namespace",
@@ -68,9 +104,9 @@ object TypeNames {
     "TypeParameter"
   )
 
-  val recapitalize: PartialFunction[String, String] = {
-   names.map(n => n.toLowerCase -> n).toMap
-  }
+  val recapitalize: String => Option[String] = {
+    names.map(n => n.toLowerCase -> n).toMap
+    }.lift.compose((s: String) => s.toLowerCase)
 
   //val singleWords = names.filter(s => s.headOption.exists(_.isUpper) && s.tail.forall(_.isLower))
   //val multiWords = names.diff(singleWords)
