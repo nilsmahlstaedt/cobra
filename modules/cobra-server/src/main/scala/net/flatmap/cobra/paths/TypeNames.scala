@@ -107,7 +107,4 @@ object TypeNames {
   val recapitalize: String => Option[String] = {
     names.map(n => n.toLowerCase -> n).toMap
     }.lift.compose((s: String) => s.toLowerCase)
-
-  //val singleWords = names.filter(s => s.headOption.exists(_.isUpper) && s.tail.forall(_.isLower))
-  //val multiWords = names.diff(singleWords)
 }

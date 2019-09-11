@@ -17,29 +17,6 @@ trait PathParser {
    * in a safe manner.
    */
   protected def typeBound[_: P]: P[TypeBound] = {
-    //import NoWhitespace._
-    //def nameCS = StringIn(TypeNames.names:_*).!
-
-    //def fixableNames = StringInIgnoreCase(TypeNames.singleWords:_*).!.map(_.toLowerCase.capitalize)
-
-    //def name: P[String] = P(StringInIgnoreCase(TypeNames.names: _*).!).map(s => TypeNames.recapitalize(s.toLowerCase))
-
-//    def names = {
-//      val parsers = TypeNames.names.map(s => P(s.!))
-//      var combined = parsers.head
-//
-//      for (p <- parsers.tail) {
-//        combined = P(combined | (p))
-//      }
-//      combined.map(_.toLowerCase).map(TypeNames.recapitalize)
-//    }
-
-    //def names2 = TypeNames.names
-    //  .map(s => P(s.!))
-    //  .foldLeft(P(Fail).map((_: Nothing) => ""))((acc, p) => P(acc | p))
-    //  .map(_.toLowerCase)
-    //  .map(TypeNames.recapitalize)
-
     P(TypeNames.namesParser)
       .map(n => Try(SymbolKind.valueOf(n)))
       .filter(_.isSuccess)
@@ -107,7 +84,6 @@ trait PathParser {
       case Parsed.Success(value, _) => Right(value)
       case f@Parsed.Failure(_, index, _) => Left(s"could not parse path at col $index. $f")
     }
-    //}
   }
 }
 
