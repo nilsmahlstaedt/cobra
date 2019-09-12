@@ -22,8 +22,11 @@ case class InitProject(id: String, mode: Mode, root: String, srcRoots: List[Stri
 case class ProjectInitialized(id: String) extends ServerMessage with ProjectMessage
 
 case class GetSnippet(id: String, source: SnippetSource) extends ClientMessage with ProjectMessage
-case class ResolvedSnippet(id: String, content: String, mode: Option[Mode]) extends ServerMessage with ProjectMessage
-case class UnkownSnippet(id: String, msg: String) extends ServerMessage with ProjectMessage
+sealed trait SnippetResponse
+case class ResolvedSnippet(id: String, content: String, mode: Option[Mode]) extends ServerMessage with ProjectMessage with SnippetResponse
+case class SnippetDef(project: String, typ: String, path: String, fileName: String, startLine: Int, endLine: Int)
+case class AmbiguousDefinition(id: String, possibleSnippets: List[SnippetDef])
+case class UnkownSnippet(id: String, msg: String) extends ServerMessage with ProjectMessage with SnippetResponse
 
 sealed trait SnippetSource
 case class PathSource(path: String, startLine: Option[Int] = None, endLine: Option[Int] = None) extends SnippetSource
