@@ -10,26 +10,20 @@ import org.eclipse.lsp4j.SymbolKind
  */
 class SnippetDictionary(snippets: List[Snippet]) {
 
-  var maps: Map[SymbolKind, Map[String, Snippet]] = Map.empty
+  private type TypeDict = Map[String, List[Snippet]]
+  private type SnippetDict = Map[SymbolKind, TypeDict]
 
-  
+  val maps: SnippetDict  = snippets.groupBy(_.kind).toList.map{
+    case (kind, snpts) => (kind, snpts.groupBy(Path.buildPathString))
+  }.toMap
 
   def find(path:Path): List[Snippet] = {
     // add your details that are sub project level to this collect statement
-    val predicates = path.details.collect{
-      case TypeBound(typ) => (s:Snippet) => s.kind.equals(typ)
+    val typed: Iterable[TypeDict] = path.typeBound() match {
+      case Some(TypeBound(typ)) => maps.get(typ)
+      case None => maps.values
     }
 
-    //combine filter to single test
-    val filterFunc: Snippet => Boolean = (s:Snippet) =>
-      predicates.forall(test => test(s))
-  }
-
-  snippets.filter(filterFunc)
-}
-
-trait PredicateListComposition {
-  implicit class PredicateList[T](l: List[T => Boolean]) {
-    def composeWithAnd: T => Boolean = (x: T) => l.forall(pred => pred(x))
+    typed.flatMap(dict => dict.get(path.path)).flatten.toList
   }
 }

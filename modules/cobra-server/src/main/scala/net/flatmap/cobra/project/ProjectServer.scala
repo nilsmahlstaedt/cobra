@@ -6,10 +6,11 @@ import akka.actor.{Actor, ActorLogging, Props}
 import net.flatmap.cobra.languageserver.{LSInteraction, LSLauncher}
 import net.flatmap.cobra.util.FileUtils
 import net.flatmap.cobra._
+import net.flatmap.cobra.project.SearchActor.{RequestSnippets, SnippetResponse}
 
 import scala.util.{Properties, Success, Try}
 
-class ProjectServer(id: String, pid: Long, language: Language, mode:Mode, rootPath: Path, srcRoots: List[Path]) extends Actor with ActorLogging {
+class ProjectServer(projectId: String, pid: Long, language: Language, mode:Mode, rootPath: Path, srcRoots: List[Path]) extends Actor with ActorLogging {
 
   implicit class IfEmptyList[A](l: List[A]){
     def orIfEmpty(other: A): List[A] = orIfEmpty(List(other))
@@ -23,7 +24,7 @@ class ProjectServer(id: String, pid: Long, language: Language, mode:Mode, rootPa
   override def preStart(): Unit = {
     super.preStart()
 
-    log.debug(s"Project Server $id initializing!")
+    log.debug(s"Project Server $projectId initializing!")
 
     (for {
       ls <- LSLauncher.launch(language, rootPath, Some(pid))
@@ -33,7 +34,7 @@ class ProjectServer(id: String, pid: Long, language: Language, mode:Mode, rootPa
 
       ls.exit()
 
-      log.info(s"ProjectServer for project $id is initialized")
+      log.info(s"ProjectServer for project $projectId is initialized")
       val snippetmap: Map[String, Snippet] = snippets.map(s => {
         val parent = s.parent.getOrElse("").replaceAll("/", ".")
         val name = s.name
@@ -48,20 +49,25 @@ class ProjectServer(id: String, pid: Long, language: Language, mode:Mode, rootPa
       context.become(running(snippetmap))
     }) recover {
       case e: Throwable =>
-        log.error(e, s"could not start project actor for project '$id'")
+        log.error(e, s"could not start project actor for project '$projectId'")
         context.stop(self)
     }
 
-    log.debug(s"Project Server $id initialized")
+    log.debug(s"Project Server $projectId initialized")
   }
 
   override def receive: Receive = {
-    // this function should not be called!
       case e => log.warning(s"received message before initializing! msg:$e")
   }
 
+  def running2(dict: SnippetDictionary): Receive = {
+    case InitProject(`projectId`, _, _, _) => sender() ! ProjectInitialized(projectId)
+    case RequestSnippets(path) => sender() ! SnippetResponse(projectId, mode, dict.find(path))
+    case e => log.error(s"received unknown message: $e")
+  }
+
   def running(snippets: Map[String, Snippet]): Receive = {
-    case InitProject(`id`, _, _, _) => sender() ! ProjectInitialized(id)
+    case InitProject(`projectId`, _, _, _) => sender() ! ProjectInitialized(projectId)
     case GetSnippet(reqId, LogicalPath(path)) => //path is already adjusted by project master!
 
       log.info(snippets.toList.map{

@@ -25,7 +25,7 @@ case class GetSnippet(id: String, source: SnippetSource) extends ClientMessage w
 sealed trait SnippetResponse
 case class ResolvedSnippet(id: String, content: String, mode: Option[Mode]) extends ServerMessage with ProjectMessage with SnippetResponse
 case class SnippetDef(project: String, typ: String, path: String, fileName: String, startLine: Int, endLine: Int)
-case class AmbiguousDefinition(id: String, possibleSnippets: List[SnippetDef])
+case class AmbiguousDefinition(id: String, possibleSnippets: List[SnippetDef]) extends ServerMessage with SnippetResponse
 case class UnkownSnippet(id: String, msg: String) extends ServerMessage with ProjectMessage with SnippetResponse
 
 sealed trait SnippetSource
