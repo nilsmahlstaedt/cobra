@@ -35,6 +35,13 @@ class ProjectServer(projectId: String, pid: Long, language: Language, mode:Mode,
       ls.exit()
 
       log.info(s"ProjectServer for project $projectId is initialized")
+
+      /*
+      the snippets will be searched infrequently at a time, where the user is waiting anyways, so there is no need to
+      make the search itself super efficient. The addition overhead of constructing maps over maps of snippet
+      will probably outweigh the search time penalty
+       */
+      
 //      val snippetmap: Map[String, Snippet] = snippets.map(s => {
 //        val parent = s.parent.getOrElse("").replaceAll("/", ".")
 //        val name = s.name
