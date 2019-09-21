@@ -48,30 +48,33 @@ class SearchActor(projects: Map[String, ActorRef], replyTo: ActorRef, reqId: Str
   }
 
   def produceResponse(resps: List[SnippetResponse], missingAnswers: Int): ServerMessage = {
-    val results: List[(String, Mode, String, Snippet)] = for{
+    case class SearchResult(project: String, mode:Mode, kind: String, snippet: Snippet){
+      def toSnippetDef: SnippetDef =
+        SnippetDef(project, kind, Path.buildPathString(snippet), snippet.source.toString, snippet.startLine, snippet.endLine)
+    }
+
+    val results: List[SearchResult] = for{
       resp <- resps
       project = resp.project
       mode = resp.mode
       s <- resp.snippets
       kindString = s.kind.toString
-
-    }yield (project, mode, kindString, s)
+    }yield SearchResult(project, mode, kindString, s)
 
     results match {
       case Nil => UnkownSnippet(reqId, s"Could not find snippet for logical path $path")
-      case (_, mode, _ , snippet)::Nil => ResolvedSnippet(
+      case SearchResult(_, mode, _ , snippet)::Nil => ResolvedSnippet(
         reqId,
         SnippetResolver
           .getSourceLines(snippet)
           .mkString(Properties.lineSeparator),
         Some(mode)
       )
-      case xs => AmbiguousDefinition(reqId, xs.map{
-        case (proj, mode, kind, snippet) => SnippetDef(proj, kind, Path.buildPathString(snippet), snippet.source.toString, snippet.startLine, snippet.endLine)
-      })
+      case xs => AmbiguousDefinition(reqId, xs.map(_.toSnippetDef))
     }
   }
 }
+
  object SearchActor {
    case class RequestSnippets(path: Path)
    case class SnippetResponse(project: String, mode: Mode, snippets: List[Snippet])
