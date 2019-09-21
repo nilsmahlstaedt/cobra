@@ -10,7 +10,7 @@ import net.flatmap.cobra.project.SearchActor.{RequestSnippets, SnippetResponse}
 
 import scala.util.{Properties, Success, Try}
 
-class ProjectServer(projectId: String, pid: Long, language: Language, mode:Mode, rootPath: Path, srcRoots: List[Path]) extends Actor with ActorLogging {
+class ProjectServer(projectId: String, pid: Long, language: Language, mode:Mode, rootPath: Path, srcRoots: List[Path]) extends Actor with ActorLogging with SnippetSearch {
 
   implicit class IfEmptyList[A](l: List[A]){
     def orIfEmpty(other: A): List[A] = orIfEmpty(List(other))
@@ -35,18 +35,18 @@ class ProjectServer(projectId: String, pid: Long, language: Language, mode:Mode,
       ls.exit()
 
       log.info(s"ProjectServer for project $projectId is initialized")
-      val snippetmap: Map[String, Snippet] = snippets.map(s => {
-        val parent = s.parent.getOrElse("").replaceAll("/", ".")
-        val name = s.name
+//      val snippetmap: Map[String, Snippet] = snippets.map(s => {
+//        val parent = s.parent.getOrElse("").replaceAll("/", ".")
+//        val name = s.name
+//
+//        (s"$parent$name", s)
+//      }).foldLeft(Map.empty[String, Snippet])({
+//        case (acc,(p, s)) =>
+//          if (acc.get(p).nonEmpty) println(s"overwriting: $p (${acc(p).kind.getValue} -> ${s.kind.getValue})")
+//          acc + (p -> s)
+//      })
 
-        (s"$parent$name", s)
-      }).foldLeft(Map.empty[String, Snippet])({
-        case (acc,(p, s)) =>
-          if (acc.get(p).nonEmpty) println(s"overwriting: $p (${acc(p).kind.getValue} -> ${s.kind.getValue})")
-          acc + (p -> s)
-      })
-
-      context.become(running(snippetmap))
+      context.become(running(snippets))
     }) recover {
       case e: Throwable =>
         log.error(e, s"could not start project actor for project '$projectId'")
@@ -60,32 +60,32 @@ class ProjectServer(projectId: String, pid: Long, language: Language, mode:Mode,
       case e => log.warning(s"received message before initializing! msg:$e")
   }
 
-  def running2(dict: SnippetDictionary): Receive = {
+  def running(dict: List[Snippet]): Receive = {
     case InitProject(`projectId`, _, _, _) => sender() ! ProjectInitialized(projectId)
-    case RequestSnippets(path) => sender() ! SnippetResponse(projectId, mode, dict.find(path))
+    case RequestSnippets(path) => sender() ! SnippetResponse(projectId, mode, dict.findSnippets(path))
     case e => log.error(s"received unknown message: $e")
   }
 
-  def running(snippets: Map[String, Snippet]): Receive = {
-    case InitProject(`projectId`, _, _, _) => sender() ! ProjectInitialized(projectId)
-    case GetSnippet(reqId, LogicalPath(path)) => //path is already adjusted by project master!
-
-      log.info(snippets.toList.map{
-        case (p, s) => s"$p (${s.endLine-s.startLine+1}) (${s.startLine+1}-${s.endLine+1})" //keys.toList.sorted.mkString("\n")
-      }.sorted.mkString("\n"))
-
-      snippets.get(path)
-        .fold(sender() ! UnkownSnippet(reqId, "path not found"))(snippet => {
-          sender() ! ResolvedSnippet(
-            reqId,
-            SnippetResolver
-              .getSourceLines(snippet)
-              .mkString(Properties.lineSeparator),
-            Some(mode)
-          )
-        })
-    case e => log.error(s"received unknown message: $e")
-  }
+//  def running(snippets: Map[String, Snippet]): Receive = {
+//    case InitProject(`projectId`, _, _, _) => sender() ! ProjectInitialized(projectId)
+//    case GetSnippet(reqId, LogicalPath(path)) => //path is already adjusted by project master!
+//
+//      log.info(snippets.toList.map{
+//        case (p, s) => s"$p (${s.endLine-s.startLine+1}) (${s.startLine+1}-${s.endLine+1})" //keys.toList.sorted.mkString("\n")
+//      }.sorted.mkString("\n"))
+//
+//      snippets.get(path)
+//        .fold(sender() ! UnkownSnippet(reqId, "path not found"))(snippet => {
+//          sender() ! ResolvedSnippet(
+//            reqId,
+//            SnippetResolver
+//              .getSourceLines(snippet)
+//              .mkString(Properties.lineSeparator),
+//            Some(mode)
+//          )
+//        })
+//    case e => log.error(s"received unknown message: $e")
+//  }
 }
 
 object ProjectServer {
