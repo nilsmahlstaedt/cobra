@@ -3,7 +3,7 @@ package net.flatmap.cobra.project
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Terminated}
 import better.files._
 import net.flatmap.cobra._
-import net.flatmap.cobra.paths.{Path, PathParser}
+import net.flatmap.cobra.paths.PathParser
 
 import scala.util.{Failure, Success}
 
@@ -44,22 +44,12 @@ class ProjectMaster(mainPID: Long, baseDir: File) extends Actor with ActorLoggin
     case msg@GetSnippet(_, _: PathSource) =>
       context.actorOf(Props(new SourceLoadActor(baseDirStr))).forward(msg)
     case GetSnippet(reqId, LogicalPath(path)) =>
-      val t: Either[String, (ActorRef, GetSnippet)] = PathParser.extractPathParts(path).flatMap{
-        case p: Path => ???
-          // TODO implement a dedicated search function!
-//          projects.get(projectkey)
-//            .orElse(projects.get(projectkey.toLowerCase())) match {
-//            case None => Left(s"could not find registred project for key: '$projectkey'")
-//            case Some(ref) =>
-//              log.debug(s"found projectactor $ref for key $projectkey")
-//              Right((ref, GetSnippet(reqId, LogicalPath(snippetPath))))
-//          }
+      PathParser.extractPathParts(path) match {
+        case Left(error) => sender() ! UnkownSnippet(reqId, error)
+        case Right(logicalPath) =>
+          // initiate search, task actor will respond to original sender
+          context.actorOf(SearchActor.props()) ! SearchActor.SearchRequest(reqId, projects, logicalPath, sender())
       }
-
-      t.fold(
-        err => sender() ! UnkownSnippet(reqId, err),
-        ((a: ActorRef, msg: Any) => a.forward(msg)).tupled
-      )
 
     case e => log.warning(s"received unkown message: $e")
   }
