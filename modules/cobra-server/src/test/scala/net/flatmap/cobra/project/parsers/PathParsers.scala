@@ -9,17 +9,23 @@ class PathParsers extends FlatSpec with Matchers with Inside with PathParser {
 
   "The Path Parser" should "recognize paths" in {
     extractPathParts("foobar") shouldBe Right(Path("foobar", Nil))
-    extractPathParts("foo.bar.baz") shouldBe Right(Path("foo.bar.baz", Nil))
-    extractPathParts("  foo.bar.baz") shouldBe Right(Path("foo.bar.baz", Nil))
-    extractPathParts("foo.bar.baz  ") shouldBe Right(Path("foo.bar.baz", Nil))
+    extractPathParts("/foobar") shouldBe Right(Path("/foobar", Nil))
+    extractPathParts("foo/bar/baz") shouldBe Right(Path("foo/bar/baz", Nil))
+    extractPathParts("/foo/bar/baz") shouldBe Right(Path("/foo/bar/baz", Nil))
+    extractPathParts("  foo/bar/baz") shouldBe Right(Path("foo/bar/baz", Nil))
+    extractPathParts("  /foo/bar/baz") shouldBe Right(Path("/foo/bar/baz", Nil))
+    extractPathParts("foo/bar/baz  ") shouldBe Right(Path("foo/bar/baz", Nil))
+    extractPathParts("/foo/bar/baz  ") shouldBe Right(Path("/foo/bar/baz", Nil))
+    extractPathParts("  foo/bar/baz  ") shouldBe Right(Path("foo/bar/baz", Nil))
+    extractPathParts("  /foo/bar/baz  ") shouldBe Right(Path("/foo/bar/baz", Nil))
     extractPathParts("  foo.bar.baz  ") shouldBe Right(Path("foo.bar.baz", Nil))
   }
 
   it should "recognize everything enclosed within square brackets as keys" in {
     extractPathParts("[p:key] foobar1") shouldBe Right(Path("foobar1", ProjectAssociation("key")))
-    extractPathParts("[p:key] foobar.bar.baz1") shouldBe Right(Path("foobar.bar.baz1", ProjectAssociation("key")))
+    extractPathParts("[p:key] foobar/bar/baz1") shouldBe Right(Path("foobar/bar/baz1", ProjectAssociation("key")))
     extractPathParts("[t:function] foobar2") shouldBe Right(Path("foobar2", TypeBound(SymbolKind.Function)))
-    extractPathParts("[t:function] foobar.bar.baz2") shouldBe Right(Path("foobar.bar.baz2", TypeBound(SymbolKind.Function)))
+    extractPathParts("[t:function] /foobar/bar/baz2") shouldBe Right(Path("/foobar/bar/baz2", TypeBound(SymbolKind.Function)))
   }
 
   it should "recognize multiple keys" in {
@@ -31,7 +37,7 @@ class PathParsers extends FlatSpec with Matchers with Inside with PathParser {
   it should "recognize the path as everything after the key when separated by a space" in {
     extractPathParts("[p:path] path") shouldBe Right(Path("path", ProjectAssociation("path")))
     extractPathParts("[p:key]path") shouldBe Right(Path("path", ProjectAssociation("key")))
-    extractPathParts("[p:key] some.path") shouldBe Right(Path("some.path", ProjectAssociation("key")))
+    extractPathParts("[p:key] some/path") shouldBe Right(Path("some/path", ProjectAssociation("key")))
   }
 
   it should "discard empty keys" in {
