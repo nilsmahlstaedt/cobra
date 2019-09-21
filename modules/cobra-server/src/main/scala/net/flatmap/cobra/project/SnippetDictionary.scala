@@ -10,20 +10,20 @@ import org.eclipse.lsp4j.SymbolKind
  */
 class SnippetDictionary(snippets: List[Snippet]) {
 
-  private type TypeDict = Map[String, List[Snippet]]
-  private type SnippetDict = Map[SymbolKind, TypeDict]
-
-  val maps: SnippetDict  = snippets.groupBy(_.kind).toList.map{
-    case (kind, snpts) => (kind, snpts.groupBy(Path.buildPathString))
-  }.toMap
-
   def find(path:Path): List[Snippet] = {
-    // add your details that are sub project level to this collect statement
-    val typed: Iterable[TypeDict] = path.typeBound() match {
-      case Some(TypeBound(typ)) => maps.get(typ)
-      case None => maps.values
+    val typed: List[Snippet] = snippets.filter(s => path.typeBound().forall(bound => s.kind == bound.typ))
+    if(path.isAbsolute){
+      // path is absolute match front to end
+      typed.filter(s => {
+        val snippetPath = Path.buildPathString(s)
+        path.path.equalsIgnoreCase(snippetPath)
+      })
+    }else{
+      // path is just a partial path, match from end
+      typed.filter(s => {
+        val snippetPath = Path.buildPathString(s).toLowerCase
+        snippetPath.toLowerCase.endsWith(path.path)
+      })
     }
-
-    typed.flatMap(dict => dict.get(path.path)).flatten.toList
   }
 }
