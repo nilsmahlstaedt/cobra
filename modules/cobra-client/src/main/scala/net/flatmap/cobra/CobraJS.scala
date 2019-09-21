@@ -73,6 +73,9 @@ object CobraJS extends SocketApp[ServerMessage,ClientMessage]("/socket","cobra",
     case UnkownSnippet(id, msg) => {
       Code.openSnippetRequests().get(id).foreach(f => f(s"Could not load snippet\n$msg", Some(Plain)))
     }
+    case AmbiguousDefinition(id, possibleSnippets) => {
+      Code.openSnippetRequests().get(id).foreach(f => f(s"Found multiple possible snippets!\n${possibleSnippets.map(_.toString).mkString("\n")}", Some(Plain)))
+    }
   }
 
   var heartBeatAcknowledged: Boolean = true
