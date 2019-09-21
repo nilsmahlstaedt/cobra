@@ -3,14 +3,8 @@ package net.flatmap.cobra.paths
 import net.flatmap.cobra.Snippet
 import org.eclipse.lsp4j.SymbolKind
 
-sealed abstract class PathDetail {
-//  def toFilter: (Snippet => Boolean)
-}
-
-case class ProjectAssociation(project: String) extends PathDetail {
-
-}
-
+sealed abstract class PathDetail
+case class ProjectAssociation(project: String) extends PathDetail
 case class TypeBound(typ: SymbolKind) extends PathDetail
 
 case class Path(path: String, details: List[PathDetail]){
