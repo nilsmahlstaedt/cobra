@@ -3,14 +3,16 @@ package net.flatmap.cobra
 import java.awt.Desktop
 import java.io.{BufferedReader, InputStream, InputStreamReader}
 import java.net.URI
-import java.nio.file.{Files, Paths}
+import java.nio.file.{Files, Paths, StandardWatchEventKinds}
 import java.nio.file.attribute.{PosixFileAttributes, PosixFilePermission}
 
+import akka.actor.ActorSystem
 import better.files.File.OpenOptions
 import better.files._
 import better.files.Dsl.SymbolicOperations
 import com.typesafe.config.ConfigFactory
 
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -129,6 +131,28 @@ object Cobra extends App {
     //case (Success(htime), Success(mtime)) if htime.isAfter(mtime) => // do nothing
       case _ => ()
 
+    }
+    // TODO watch for changes of slides.md and regenerate slides.html from it if necessary
+    /*
+    echo "foobar" >> slides.md -> does trigger file change event
+    open in geddit + change + save -> no trigger, but change in .goutputstream-D5JL8Z
+
+    i have no idea why this happens
+     */
+    import better.files._
+    import FileWatcher._
+
+    val f: File = (directory)
+    implicit val sys: ActorSystem = ActorSystem("foo")
+    f.newWatcher(false) ! on(StandardWatchEventKinds.ENTRY_MODIFY) {
+      case f if(f.extension.exists(_.contains("md"))) => try{
+        println(s"file change in $f detected")
+        println("update of slides.md detected. regenerating slides.html from it")
+        generateSlides()
+      } catch {
+        case NonFatal(ex) => println(s"could not regenerate slides! $ex")
+      }// regenerate the slides
+      case _ => () //do nothing
     }
   }
 
