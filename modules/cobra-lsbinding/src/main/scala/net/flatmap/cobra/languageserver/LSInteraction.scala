@@ -22,7 +22,7 @@ object LSInteraction extends LSConverters {
       }
   }
 
-  private def analyzeFile(ls: LanguageServer)(f: Path): Try[List[Snippet]] = Try {
+  def analyzeFile(ls: LanguageServer)(f: Path): Try[List[Snippet]] = Try {
     val docURI = f.toUri.toString
 
     println(s"  analyzing $docURI")
