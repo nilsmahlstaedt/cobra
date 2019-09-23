@@ -1,5 +1,7 @@
 package net.flatmap.cobra.project
 
+import java.nio.file.Path
+
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Terminated}
 import better.files._
 import net.flatmap.cobra._
@@ -14,25 +16,29 @@ class ProjectMaster(mainPID: Long, baseDir: File) extends Actor with ActorLoggin
   private val baseDirStr = baseDir.path.toAbsolutePath.toString
 
   def running(projects: Map[String, ActorRef]): Receive = {
-    case msg@InitProject(id, _, _, _) if projects.contains(id) =>
-      println(projects)
+    case msg@InitProject(id, _, _, _) =>
+      var updatedProjects = projects
 
-      projects(id).tell(msg, sender)
-
-    case msg@InitProject(id, mode, root, srcs) =>
-      println(projects)
-
-      ProjectServer
-        .props(mainPID, id, mode, root, srcs)
-        .map(context.actorOf(_, id)) match {
-        case Failure(exception) =>
-          log.error(s"could not initialize project $id", exception)
-        case Success(pRef) =>
-          log.info(s"started project actor for $id")
-          context.watch(pRef)
-          pRef.forward(msg)
-          context.become(running(projects + (id -> pRef)))
+      if(projects.contains(id)){
+        log.debug(s"removing project actor for $id")
+        context.stop(projects(id))
+        updatedProjects = updatedProjects - id
       }
+
+      log.debug(s"starting project actor for $id")
+      initProject(msg).foreach{
+        case (id, projectServer) =>
+          projectServer.forward(msg)
+          context.become(running(updatedProjects + (id -> projectServer)))
+      }
+
+    case msg: InitProject =>
+      //println(projects)
+      initProject(msg).foreach{
+        case (id, projectServer) => context.become(running(projects + (id -> projectServer)))
+      }
+
+
 
     case Terminated(ref) =>
       projects.find { case (key, value) => value.equals(ref) }.foreach {
@@ -52,6 +58,21 @@ class ProjectMaster(mainPID: Long, baseDir: File) extends Actor with ActorLoggin
       }
 
     case e => log.warning(s"received unkown message: $e")
+  }
+
+  def initProject(initMsg: InitProject): Option[(String,ActorRef)] = {
+    ProjectServer
+      .props(mainPID, initMsg.id, initMsg.mode, initMsg.root, initMsg.srcRoots)
+      .map(context.actorOf(_, initMsg.id)) match {
+      case Failure(exception) =>
+        log.error(s"could not initialize project ${initMsg.id}", exception)
+        None
+      case Success(pRef) =>
+        log.info(s"started project actor for ${initMsg.id}")
+        context.watch(pRef)
+        pRef.forward(initMsg)
+        Some((initMsg.id, pRef))
+    }
   }
 }
 
