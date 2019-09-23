@@ -1,19 +1,17 @@
 package net.flatmap.cobra
 
-import java.awt.Desktop
-import java.io.{BufferedReader, InputStream, InputStreamReader}
-import java.net.URI
-import java.nio.file.{Files, Paths, StandardWatchEventKinds}
-import java.nio.file.attribute.{PosixFileAttributes, PosixFilePermission}
+import java.nio.file.attribute.PosixFilePermission
+import java.nio.file._
 
-import akka.actor.ActorSystem
-import better.files.File.OpenOptions
-import better.files._
 import better.files.Dsl.SymbolicOperations
+import better.files._
 import com.typesafe.config.ConfigFactory
 
-import scala.util.control.NonFatal
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
+
 
 /**
   * Created by martin on 03.02.16.
@@ -139,20 +137,30 @@ object Cobra extends App {
 
     i have no idea why this happens
      */
-    import better.files._
-    import FileWatcher._
+    val slidesMd = (directory / "slides.md")
+    val watchService = FileSystems.getDefault.newWatchService()
+    directory.path.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY)
+    directory.path.register(watchService, StandardWatchEventKinds.ENTRY_CREATE)
 
-    val f: File = (directory)
-    implicit val sys: ActorSystem = ActorSystem("foo")
-    f.newWatcher(false) ! on(StandardWatchEventKinds.ENTRY_MODIFY) {
-      case f if(f.extension.exists(_.contains("md"))) => try{
-        println(s"file change in $f detected")
-        println("update of slides.md detected. regenerating slides.html from it")
-        generateSlides()
-      } catch {
-        case NonFatal(ex) => println(s"could not regenerate slides! $ex")
-      }// regenerate the slides
-      case _ => () //do nothing
+    Future{
+      println(s"start watching ${directory.path} for changes ")
+
+      while(true){
+        val key = watchService.take()
+
+        for(event <- key.pollEvents().asScala.toList){
+          event match {
+            case x:WatchEvent[Path] => if(x.context().endsWith(slidesMd.path)){
+              println("update of slides.md detected!")
+              println("regenerating slides!")
+              generateSlides()
+            }
+            case _ => ()
+          }
+        }
+
+        key.reset()
+      }
     }
   }
 
