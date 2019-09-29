@@ -2,7 +2,7 @@ package net.flatmap.cobra.project
 
 import java.nio.file.Path
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props, Terminated}
+import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props, Terminated}
 import better.files._
 import net.flatmap.cobra._
 import net.flatmap.cobra.paths.PathParser
@@ -16,6 +16,10 @@ class ProjectMaster(mainPID: Long, baseDir: File) extends Actor with ActorLoggin
   private val baseDirStr = baseDir.path.toAbsolutePath.toString
 
   def running(projects: Map[String, ActorRef]): Receive = {
+    case ResetAllSnippets =>
+      projects.foreach{
+        case (_, ref) => ref ! PoisonPill
+      }
     case msg@InitProject(id, _, _, _) =>
       var updatedProjects = projects
 

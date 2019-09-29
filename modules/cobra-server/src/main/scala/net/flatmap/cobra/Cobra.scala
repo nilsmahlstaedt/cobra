@@ -143,14 +143,14 @@ object Cobra extends App {
     directory.path.register(watchService, StandardWatchEventKinds.ENTRY_CREATE)
 
     Future{
-      println(s"start watching ${directory.path} for changes ")
+      println(s"start watching ${directory.path} for changes to ${slidesMd.name}${slidesMd.extension(includeDot = true)}")
 
       while(true){
         val key = watchService.take()
 
         for(event <- key.pollEvents().asScala.toList){
           event match {
-            case x:WatchEvent[Path] => if(x.context().endsWith(slidesMd.path)){
+            case x:WatchEvent[Path] if x.context().getFileName.equals(slidesMd.path.getFileName) => {
               println("update of slides.md detected!")
               println("regenerating slides!")
               generateSlides()
