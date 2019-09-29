@@ -12,14 +12,13 @@ val commonSettings = Seq(
   mappings in (Compile, packageDoc) := Seq()
 )
 
-scalaVersion := "2.13.0"
+//scalaVersion := "2.13.0"
 
 lazy val iconGlob = sys.props("os.name").toLowerCase match {
   case os if os.contains("mac") ⇒ "*.icns"
   case os if os.contains("win") ⇒ "*.ico"
   case _ ⇒ "*.png"
 }
-
 
 lazy val server = (project in file("modules/cobra-server"))
   .enablePlugins(JavaAppPackaging,UniversalPlugin,LinuxPlugin,RpmPlugin,DebianPlugin,WindowsPlugin)
@@ -109,7 +108,7 @@ lazy val lsbinding = (project in file("modules/cobra-lsbinding"))
   .settings(
     name := "cobra.lsbinding",
     libraryDependencies += "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % "0.7.0",
-    libraryDependencies += "com.typesafe" % "config" % "1.3.4"
+    libraryDependencies += "com.typesafe" % "config" % "1.3.3"
   )
 
 lazy val commonJS = common.js
