@@ -31,6 +31,6 @@ object Path {
 
   def buildPathString(s: Snippet): String = buildPathString(s.parent, s.name)
   def buildPathString(parent: Option[String], name: String): String = {
-    s"${parent.getOrElse("")}$name"
+    s"/${parent.getOrElse("")}$name"
   }
 }

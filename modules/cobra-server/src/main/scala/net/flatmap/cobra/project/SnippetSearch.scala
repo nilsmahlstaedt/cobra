@@ -9,19 +9,22 @@ import org.eclipse.lsp4j.SymbolKind
  */
 trait SnippetSearch{
   implicit class SnippetDictionary(snippets: List[Snippet]) {
-    def findSnippets(path:Path): List[Snippet] = {
-      val typed: List[Snippet] = snippets.filter(s => path.typeBound().forall(bound => s.kind == bound.typ))
-      if(path.isAbsolute){
+    def findSnippets(p:Path): List[Snippet] = {
+      val typed: List[Snippet] = snippets
+        .filter(s => p.typeBound().forall(bound => s.kind.equals(bound.typ)))
+
+
+      if(p.isAbsolute){
         // path is absolute match front to end
         typed.filter(s => {
           val snippetPath = Path.buildPathString(s)
-          path.path.equalsIgnoreCase(snippetPath)
+          snippetPath.trim.toLowerCase.startsWith(p.path.trim.toLowerCase)
         })
       }else{
         // path is just a partial path, match from end
         typed.filter(s => {
-          val snippetPath = Path.buildPathString(s).toLowerCase
-          snippetPath.toLowerCase.endsWith(path.path)
+          val snippetPath = Path.buildPathString(s).toLowerCase.trim
+          snippetPath.toLowerCase.contains(p.path.trim)
         })
       }
     }

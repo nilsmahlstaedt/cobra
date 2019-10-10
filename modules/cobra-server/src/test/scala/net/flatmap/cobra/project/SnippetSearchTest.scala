@@ -12,28 +12,38 @@ class SnippetSearchTest extends FlatSpec with Matchers with SnippetSearch {
     Snippet("myclass", Some("some/package/"), Paths.get("testfile"), 0, 0, SymbolKind.Class),
     Snippet("myclass", Some("some/package/"), Paths.get("testfile"), 0, 0, SymbolKind.Object),
     Snippet("myfunc", Some("some/package/myclass/"), Paths.get("testfile"), 0, 0, SymbolKind.Function),
+    Snippet("snippet", Some("some/other/"), Paths.get("testfile"), 0, 0, SymbolKind.Class),
   )
 
   "SnippetSearch" should "return all matches for an incomplete absolute path" in {
     val p = Path("/some/package/")
     val res = snippets.findSnippets(p)
     res.length shouldBe 3
-    res shouldBe snippets
+    res shouldBe snippets.take(3)
   }
 
   it should "return all matches for an incomplete relative path" in {
     val res = snippets.findSnippets(Path("package"))
-    res.length shouldBe 2
-    res shouldBe snippets.drop(1)
+    res.length shouldBe 3
+    res shouldBe snippets.take(3)
+
+    val res2 = snippets.findSnippets(Path("other"))
+    res2.length shouldBe 1
+    res2 shouldBe List(snippets(3))
   }
 
   it should "find a complete path" in {
     val res = snippets.findSnippets(Path("/some/package/myclass"))
-    res.length shouldBe 1
-    res.head shouldBe snippets(3)
+    res.length shouldBe 3
+    res shouldBe snippets.take(3)
 
-    val res2 = snippets.findSnippets(Path("/no/in/some/package"))
-    res2 shouldBe Nil
+    val res2 = snippets.findSnippets(Path("/some/package/myclass/myfunc"))
+    res2.length shouldBe 1
+    res2 shouldBe List(snippets(2))
+
+
+    val res3 = snippets.findSnippets(Path("/no/in/some/package"))
+    res3 shouldBe Nil
   }
 
   it should "find snippets with relativ paths" in {
@@ -52,11 +62,11 @@ class SnippetSearchTest extends FlatSpec with Matchers with SnippetSearch {
   it should "respect type bounds" in {
     val res = snippets.findSnippets(Path("some/package", TypeBound(SymbolKind.Class)))
     res.length shouldBe 1
-    res.head shouldBe snippets(1)
+    res.head shouldBe snippets(0)
 
     val res2 = snippets.findSnippets(Path("some/package", TypeBound(SymbolKind.Object)))
     res2.length shouldBe 1
-    res2.head shouldBe snippets(2)
+    res2.head shouldBe snippets(1)
   }
 
 }
