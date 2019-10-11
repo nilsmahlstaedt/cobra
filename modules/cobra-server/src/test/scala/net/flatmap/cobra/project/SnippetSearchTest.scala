@@ -69,4 +69,9 @@ class SnippetSearchTest extends FlatSpec with Matchers with SnippetSearch {
     res2.head shouldBe snippets(1)
   }
 
+  it should "not find nodes where the name is only given partially" in {
+    snippets.findSnippets(Path("/some/pack")) shouldBe Nil
+    snippets.findSnippets(Path("class")) shouldBe Nil
+  }
+
 }
