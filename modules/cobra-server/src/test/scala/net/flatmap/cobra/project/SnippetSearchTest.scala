@@ -3,7 +3,7 @@ package net.flatmap.cobra.project
 import java.nio.file.Paths
 
 import net.flatmap.cobra.Snippet
-import net.flatmap.cobra.paths.{Path, TypeBound}
+import net.flatmap.cobra.paths.{Path, SnippetSearch, TypeBound}
 import org.eclipse.lsp4j.SymbolKind
 import org.scalatest.{FlatSpec, FunSuite, Matchers}
 

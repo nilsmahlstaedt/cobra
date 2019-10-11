@@ -1,8 +1,6 @@
-package net.flatmap.cobra.project
+package net.flatmap.cobra.paths
 
 import net.flatmap.cobra.Snippet
-import net.flatmap.cobra.paths.{Path, ProjectAssociation, TypeBound}
-import org.eclipse.lsp4j.SymbolKind
 
 /**
  * makes list of snippets searchable

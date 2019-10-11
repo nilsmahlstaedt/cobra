@@ -10,6 +10,7 @@ import net.flatmap.cobra.util.FileUtils
 import org.eclipse.lsp4j.services.LanguageServer
 import better.files._
 import FileWatcher._
+import net.flatmap.cobra.paths.SnippetSearch
 import net.flatmap.cobra.project.ProjectServer.ProjectFileUpdate
 
 import scala.util.{Success, Try}
