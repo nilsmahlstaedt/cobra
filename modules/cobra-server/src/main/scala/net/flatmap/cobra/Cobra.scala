@@ -99,7 +99,7 @@ object Cobra extends App {
 
     val pandocArgs = List(
       "--mathjax",
-      "--standalone",
+      //"--standalone",
       "--from markdown+fenced_code_attributes",
       "--to revealjs",
       s"--filter ${filterPath}",
