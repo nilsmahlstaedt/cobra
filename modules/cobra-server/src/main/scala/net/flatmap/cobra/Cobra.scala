@@ -130,8 +130,8 @@ object Cobra extends App {
       case _ => ()
 
     }
-    // TODO watch for changes of slides.md and regenerate slides.html from it if necessary
     /*
+    Authors Note:
     echo "foobar" >> slides.md -> does trigger file change event
     open in geddit + change + save -> no trigger, but change in .goutputstream-D5JL8Z
 
