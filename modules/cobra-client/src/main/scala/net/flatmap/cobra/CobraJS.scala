@@ -61,6 +61,7 @@ object CobraJS extends SocketApp[ServerMessage,ClientMessage]("/socket","cobra",
     case FileUpdate(other) => // TODO: differentiate here!
       send(ResetAllSnippets)
       initialize()
+
     case ProjectInitialized(key) =>
       // decrease number of projects we are waiting for
       Projects.initsRemainging.modify(_ - key)
@@ -70,11 +71,14 @@ object CobraJS extends SocketApp[ServerMessage,ClientMessage]("/socket","cobra",
       Code.openSnippetRequests().get(id).foreach(f => {
         f(content, mode)
       })
-    case UnkownSnippet(id, msg) => {
-      Code.openSnippetRequests().get(id).foreach(f => f(s"Could not load snippet\n$msg", Some(Plain)))
+    case UnknownSnippet(id, msg) => {
+      Code.openSnippetRequests().get(id).foreach(f => f(msg, Some(Plain)))
     }
     case AmbiguousDefinition(id, possibleSnippets) => {
-      Code.openSnippetRequests().get(id).foreach(f => f(s"Found multiple possible snippets!\n${possibleSnippets.map(_.toString).mkString("\n")}", Some(Plain)))
+      val snippetParts = possibleSnippets.map(s =>{
+        s"[p:${s.project}][t:${s.typ}] ${s.path} (${s.endLine-s.startLine} line(s))"
+      })
+      Code.openSnippetRequests().get(id).foreach(f => f(s"Found multiple possible snippets!\n${snippetParts.mkString("\n")}", Some(Plain)))
     }
   }
 
