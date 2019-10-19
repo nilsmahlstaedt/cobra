@@ -231,6 +231,7 @@ class CobraServer(val directory: File) {
           StandardWatchEventKinds.ENTRY_MODIFY) {
           case (StandardWatchEventKinds.ENTRY_MODIFY, file) =>
             ref ! FileUpdate(directory.relativize(file).toString)
+          case _ => () //ignore
         }
         Source.fromPublisher(pub)
       })
