@@ -25,9 +25,6 @@ object LSInteraction extends LSConverters {
   def analyzeFile(ls: LanguageServer)(f: Path): Try[List[Snippet]] = Try {
     val docURI = f.toUri.toString
 
-    println(s"  analyzing $docURI")
-
-    //open document for LSP
     ls.getTextDocumentService.didOpen(
       new DidOpenTextDocumentParams(
         new TextDocumentItem(

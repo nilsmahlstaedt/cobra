@@ -41,12 +41,10 @@ object LSLauncher {
     val server: LanguageServer = launcher.getRemoteProxy
 
     println("initialize!")
-    val initializationResult = server.initialize(
-      generateInitParams(pid.getOrElse(PID.get()).toInt, projectRoot, printDebugOutput)
-    ).get
-
-    println("initialized!")
+    val initParams = generateInitParams(pid.getOrElse(PID.get()).toInt, projectRoot, printDebugOutput)
+    server.initialize(initParams).get
     server.initialized(new InitializedParams())
+    println("initialized!")
 
     server
   }
