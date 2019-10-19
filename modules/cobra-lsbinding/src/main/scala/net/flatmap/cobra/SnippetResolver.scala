@@ -11,7 +11,7 @@ object SnippetResolver {
     */
   def getSourceLines(s: Snippet): List[String] ={
     val source = Source.fromFile(s.source.toFile.toString)//, Codec.UTF8.toString())
-    val lines = source.getLines().slice(s.startLine, s.endLine).toList
+    val lines = source.getLines().slice(s.startLine, s.endLine+1).toList
     source.close()
 
     lines
