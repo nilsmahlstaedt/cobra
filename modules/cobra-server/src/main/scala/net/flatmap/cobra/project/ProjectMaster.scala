@@ -55,7 +55,7 @@ class ProjectMaster(mainPID: Long, baseDir: File) extends Actor with ActorLoggin
       context.actorOf(Props(new SourceLoadActor(baseDirStr))).forward(msg)
     case GetSnippet(reqId, LogicalPath(path)) =>
       PathParser.extractPathParts(path) match {
-        case Left(error) => sender() ! UnkownSnippet(reqId, error)
+        case Left(error) => sender() ! UnknownSnippet(reqId, error)
         case Right(logicalPath) =>
           // initiate search, task actor will respond to original sender
           context.actorOf(SearchActor.props()) ! SearchActor.SearchRequest(reqId, projects, logicalPath, sender())

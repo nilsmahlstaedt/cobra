@@ -30,7 +30,7 @@ class SourceLoadActor(basePath: String) extends Actor with ActorLogging {
         case Failure(ex) =>
           log.info(s"could not resolve snippet $reqId")
           log.info(ex.toString)
-          sender() ! UnkownSnippet(reqId, ex.getLocalizedMessage)
+          sender() ! UnknownSnippet(reqId, ex.getLocalizedMessage)
       }
 
       context.stop(self)

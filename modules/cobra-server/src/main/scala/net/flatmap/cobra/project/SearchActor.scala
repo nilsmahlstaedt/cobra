@@ -67,7 +67,7 @@ class SearchActor extends Actor with ActorLogging {
    */
   def receive: Receive = {
     case SearchActor.SearchRequest(reqId, projects, _, replyTo) if projects.isEmpty =>
-      replyTo ! UnkownSnippet(reqId, s"search initiated for a set of 0 projects!")
+      replyTo ! UnknownSnippet(reqId, s"search initiated for a set of 0 projects!")
       context.stop(self)
 
     case req@SearchActor.SearchRequest(reqId, projects, path, replyTo) =>
@@ -75,7 +75,7 @@ class SearchActor extends Actor with ActorLogging {
       val toSearch = projectsToSearch(projects, path)
       if(toSearch.isEmpty){
         // no project found
-        replyTo ! UnkownSnippet(reqId, s"no project found for project id '${path.projectAssociation().map(_.project).getOrElse("")}'")
+        replyTo ! UnknownSnippet(reqId, s"no project found for project id '${path.projectAssociation().map(_.project).getOrElse("")}'")
         context.stop(self)
       }else{
         //query project actors
@@ -113,7 +113,7 @@ class SearchActor extends Actor with ActorLogging {
     } yield SearchResult(project, mode, kindString, s)
 
     results match {
-      case Nil => UnkownSnippet(request.reqId, s"Could not find snippet for logical path ${request.path}")
+      case Nil => UnknownSnippet(request.reqId, s"Could not find snippet for logical path ${request.path}")
       case SearchResult(_, mode, _, snippet) :: Nil => ResolvedSnippet(
         request.reqId,
         SnippetResolver
