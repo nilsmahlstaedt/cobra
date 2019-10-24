@@ -8,7 +8,14 @@ import scala.concurrent.{Future, Promise}
 
 object Projects {
 
-  val initsRemainging: RVar[Set[String]] = RVar.apply(Set.empty)
+  var pendingInits: RVar[Set[String]] = RVar(Set.empty)
+
+  /**
+   * clear id's or pending project initialisations
+   */
+  def resetPendingInits(): Unit = {
+    pendingInits = RVar(Set.empty)
+  }
 
   def initProjects(root: NodeSeqQuery): Future[Unit] = {
     console.info("initializing projects")
@@ -23,14 +30,14 @@ object Projects {
       mode match {
         case Some(m) =>
           CobraJS.send(InitProject(key, m, root, srcRoots))
-          initsRemainging.modify(_ + key)
+          pendingInits.modify(_ + key)
         case None => console.error(s"could not initialize project for language ${project.getAttribute("data-language")}")
       }
     }
 
     val p = Promise.apply[Unit]()
 
-    initsRemainging.react(remaining => {
+    pendingInits.react(remaining => {
       console.info(s"waiting for ${remaining.size} projects to initialize")
       if(remaining.isEmpty) p.success(())
     })
@@ -42,7 +49,7 @@ object Projects {
     )
 
     // should there be no projects to init complete the promise right now!
-    if(initsRemainging().isEmpty) p.success(())
+    if(pendingInits().isEmpty) p.success(())
 
     fut
   }

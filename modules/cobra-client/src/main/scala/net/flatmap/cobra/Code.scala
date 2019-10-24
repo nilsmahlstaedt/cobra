@@ -24,8 +24,15 @@ import scala.util.matching.Regex
 object Code {
 
   // requests code snippets from server
-  val openSnippetRequests: RVar[Map[String, (String, Option[Mode]) => Unit]] = RVar.apply(Map.empty)
+  var handlers: RVar[Map[String, (String, Option[Mode]) => Unit]] = RVar(Map.empty)
   //val openSnippetRequests = mutable.Map.empty[String, String => Unit]
+
+  /**
+   * resets the counter for pending snippet requests
+   */
+  def resetHandlers() = {
+    handlers = RVar(Map.empty)
+  }
 
   def simplyfySnippets(root: NodeSeqQuery): Unit = {
     root.query("[src^='[']").elements.foreach{elem =>
@@ -86,10 +93,10 @@ object Code {
         PathSource(src, from, to)
       }
 
-      openSnippetRequests.modify(_ + (reqId -> ((content: String, mode:Option[Mode]) => {
+      handlers.modify(_ + (reqId -> ((content: String, mode:Option[Mode]) => {
         mode.foreach(m => code.classes += m.name)
         code.text = content
-        Code.openSnippetRequests.modify(_ - reqId)
+        Code.handlers.modify(_ - reqId)
       })))
 
       CobraJS.send(WatchFile(src))
@@ -111,19 +118,19 @@ object Code {
 //    }
 
     // fulfill promise if no snippet remains to be inserted
-    openSnippetRequests.react(remaining => {
+    handlers.react(remaining => {
       console.info(s"waiting for ${remaining.size} snippets to load")
       if(remaining.isEmpty) p.success(())
     })
 
     val fut = p.future
-    
+
     fut.onComplete(_ =>
       console.info("delayed snippet loading is completed!")
     )
 
     // should there be no snippet to load complete the promise right now!
-    if(openSnippetRequests().isEmpty) p.success(())
+    if(handlers().isEmpty) p.success(())
 
     fut
   }

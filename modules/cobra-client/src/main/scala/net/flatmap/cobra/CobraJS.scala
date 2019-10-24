@@ -64,21 +64,21 @@ object CobraJS extends SocketApp[ServerMessage,ClientMessage]("/socket","cobra",
 
     case ProjectInitialized(key) =>
       // decrease number of projects we are waiting for
-      Projects.initsRemainging.modify(_ - key)
+      Projects.pendingInits.modify(_ - key)
     case ResolvedSnippet(id, content, mode) =>
       // run insert handler
       // handler will remove itself from openSnippetRequests
-      Code.openSnippetRequests().get(id).foreach(f => {
+      Code.handlers().get(id).foreach(f => {
         f(content, mode)
       })
     case UnknownSnippet(id, msg) => {
-      Code.openSnippetRequests().get(id).foreach(f => f(msg, Some(Plain)))
+      Code.handlers().get(id).foreach(f => f(msg, Some(Plain)))
     }
     case AmbiguousDefinition(id, possibleSnippets) => {
       val snippetParts = possibleSnippets.map(s =>{
         s"[p:${s.project}][t:${s.typ}] ${s.path} (${s.endLine-s.startLine} line(s))"
       })
-      Code.openSnippetRequests().get(id).foreach(f => f(s"Found multiple possible snippets!\n${snippetParts.mkString("\n")}", Some(Plain)))
+      Code.handlers().get(id).foreach(f => f(s"Found multiple possible snippets!\n${snippetParts.mkString("\n")}", Some(Plain)))
     }
   }
 
@@ -98,6 +98,8 @@ object CobraJS extends SocketApp[ServerMessage,ClientMessage]("/socket","cobra",
       }
     } else if (!initializing) {
       handlers.clear()
+      Projects.resetPendingInits()
+      Code.resetHandlers()
       for {
         slides <- $"#slides" <<< "slides.html"
         projects = Projects.initProjects(slides)
