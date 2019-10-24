@@ -8,7 +8,7 @@ import net.flatmap.cobra.Snippet
 trait SnippetSearch{
 
   private def splitPath(s: String): List[String]  = {
-    s.split('/').toList.map(_.trim.toLowerCase).filter(_.nonEmpty)
+    s.split('.').toList.map(_.trim.toLowerCase).filter(_.nonEmpty)
   }
 
   private def joinPath(s: List[String]): String = {
@@ -24,19 +24,19 @@ trait SnippetSearch{
       val splitted = typed.map(Path.buildPathString).map(splitPath)
       val pSplit = splitPath(p.path)
 
-      if(p.isAbsolute){
-        // path is absolute match front to end
-        typed.filter(s => {
-          val sSplit: List[String] = splitPath(Path.buildPathString(s))
-          sSplit.startsWith(pSplit)
-        })
-      }else{
+//      if(p.isAbsolute){
+//        // path is absolute match front to end
+//        typed.filter(s => {
+//          val sSplit: List[String] = splitPath(Path.buildPathString(s))
+//          sSplit.startsWith(pSplit)
+//        })
+//      }else{
         // path is just a partial path, match from end
         typed.filter(s => {
           val sSplit: List[String] = splitPath(Path.buildPathString(s))
           sSplit.containsSlice(pSplit)
         })
-      }
+//      }
     }
   }
 }

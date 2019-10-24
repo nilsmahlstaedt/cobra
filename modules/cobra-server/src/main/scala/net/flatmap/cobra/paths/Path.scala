@@ -8,7 +8,7 @@ case class ProjectAssociation(project: String) extends PathDetail
 case class TypeBound(typ: SymbolKind) extends PathDetail
 
 case class Path(path: String, details: List[PathDetail]){
-  def isAbsolute: Boolean = path.startsWith("/")
+  //def isAbsolute: Boolean = path.startsWith("/")
 
   def projectAssociation(): Option[ProjectAssociation] = details.collectFirst {
     case x: ProjectAssociation => x
@@ -31,6 +31,7 @@ object Path {
 
   def buildPathString(s: Snippet): String = buildPathString(s.parent, s.name)
   def buildPathString(parent: Option[String], name: String): String = {
-    s"/${parent.getOrElse("")}$name"
+    //s"/${parent.getOrElse("")}$name"
+    s"${parent.getOrElse("").replace('/','.')}$name"
   }
 }
