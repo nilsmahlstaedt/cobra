@@ -42,7 +42,7 @@ class SnippetSearchTest extends FlatSpec with Matchers with SnippetSearch {
     res2 shouldBe List(snippets(2))
 
 
-    val res3 = snippets.findSnippets(Path("/no/in/some/package"))
+    val res3 = snippets.findSnippets(Path("/not/in/some/package"))
     res3 shouldBe Nil
   }
 
