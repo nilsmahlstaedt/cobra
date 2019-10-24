@@ -15,9 +15,9 @@ class SearchActor extends Actor with ActorLogging {
 
   override def preStart(): Unit = {
     super.preStart()
-    // stop self if not receiving an answer for a second
-    context.setReceiveTimeout(1.second)
-    // done here to ensure cleanup, even if no answer is ever sent to the actor
+    // stop self if not receiving an answer for 5 minutes to prevent resource leaks
+    context.setReceiveTimeout(5.minutes)
+    // done here to ensure shutdown, even if no answer is ever sent to the actor
   }
 
   /**
