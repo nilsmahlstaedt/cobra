@@ -102,10 +102,10 @@ object CobraJS extends SocketApp[ServerMessage,ClientMessage]("/socket","cobra",
       Code.resetHandlers()
       for {
         slides <- $"#slides" <<< "slides.html"
-        projects = Projects.initProjects(slides)
         _ = Code.simplyfySnippets(slides)
-        _ <- projects
+        projects = Projects.initProjects(slides)
         snippets = Code.loadDelayed2(slides)
+        _ <- projects
         //delayedSnippets <- Code.loadDelayed(slides)
         _ <- snippets
         options <- initialOptions.future
