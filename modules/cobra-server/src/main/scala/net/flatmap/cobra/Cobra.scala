@@ -51,7 +51,6 @@ object Cobra extends App {
     val slides = scala.io.Source.fromURL(getClass.getResource("/template-slides.html")).mkString
       .replaceAll("\\{\\s*title\\s*\\}", name)
 
-    // TODO read filter from resources and put it into the dir
     import better.files.InputStreamExtensions
     val pandocFilterRes = getClass.getResourceAsStream("/projectDefFilter").byteArray
 

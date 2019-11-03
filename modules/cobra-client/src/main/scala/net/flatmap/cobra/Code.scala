@@ -96,20 +96,6 @@ object Code {
       CobraJS.send(GetSnippet(reqId, msg))
     }
 
-//    root.query("[src^='[']").elements.foreach {elem =>
-//      val reqId = UUID.randomUUID().toString
-//      val src = elem.getAttribute("src")
-//      val from = Option(code.getAttribute("from")).filter(_.nonEmpty).flatMap(_.toIntOption)
-//      val to = Option(code.getAttribute("to")).filter(_.nonEmpty).flatMap(_.toIntOption)
-//
-//      //TODO build code object with all atributes of the original object (but simplyfy the content to just basic text!)
-//      val parent = elem.parentNode
-//      val newElem = org.scalajs.dom.document.createElement("code")
-//      newElem.a
-//
-//      openS
-//    }
-
     // fulfill promise if no snippet remains to be inserted
     openSnippetRequests.react(remaining => {
       console.info(s"waiting for ${remaining.size} snippets to load")
