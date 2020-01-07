@@ -43,7 +43,8 @@ object LSInteraction extends LSConverters {
 
     //close document
     ls.getTextDocumentService.didClose(new DidCloseTextDocumentParams(new TextDocumentIdentifier(docURI)))
+    //println(s"analysed: ${f.toAbsolutePath}")
 
-    symbolResp.map(Snippet.apply)
+    symbolResp.flatMap(Snippet.apply(f, _))
   }
 }
