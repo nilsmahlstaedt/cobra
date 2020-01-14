@@ -59,7 +59,6 @@ object LSLauncher {
 
     println(s"""starting process with cmd="$cmd"""")
 
-    // TODO suppress IO for java ProcessBuilder
     val process: Process = synchronized {
       new ProcessBuilder((cmd :: args).asJava).start()
     }
