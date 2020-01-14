@@ -51,7 +51,6 @@ object Cobra extends App {
     val slides = scala.io.Source.fromURL(getClass.getResource("/template-slides.html")).mkString
       .replaceAll("\\{\\s*title\\s*\\}", name)
 
-    // TODO read filter from resources and put it into the dir
     import better.files.InputStreamExtensions
     val pandocFilterRes = getClass.getResourceAsStream("/projectDefFilter").byteArray
 
@@ -73,16 +72,13 @@ object Cobra extends App {
     sys.exit(-1)
   }
 
-  val directory = if (args.isEmpty) File(".") else File(args.head)
+  val directory: File = if (args.isEmpty) File(".") else File(args.head)
 
   // taken from CobraServer
   // TODO refactor copied code from CobraServer
-  def readConfig() = ConfigFactory.parseFile(
-    (directory / "cobra.conf").toJava
-  ).withFallback(ConfigFactory.load().getConfig("cobra"))
 
   def generateSlides(): Unit = {
-    val conf = readConfig()
+    val conf = Configuration.read(directory)
     val pandocPath = conf.getString("markdown.pandoc.path")
 
     val filterPath = {
