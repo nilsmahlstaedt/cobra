@@ -46,7 +46,11 @@ class ProjectServer(projectId: String, pid: Long, language: Language, mode: Mode
 
       log.debug("finding project files")
       val projectFiles = FileUtils.findProjectFiles(language, srcRoots.orIfEmpty(rootPath)).getOrElse(Nil).distinct
-      log.debug("analyzing project files")
+
+      if(log.isDebugEnabled){
+        log.debug(s"analyzing ${projectFiles.size} project files:")
+        projectFiles.foreach(f => println(s"$projectId:${f.toAbsolutePath}"))
+      }
       val snippets: List[Snippet] = LSInteraction.analyzeProjectFiles(ls, projectFiles)
 
       log.debug("creating file watches")
@@ -59,7 +63,9 @@ class ProjectServer(projectId: String, pid: Long, language: Language, mode: Mode
 
       log.info(s"ProjectServer for project $projectId is initialized with ${snippets.length} snippets")
 
-      snippets.foreach(s => s"[$projectId][t:${s.kind}] ${net.flatmap.cobra.paths.Path.buildPathString(s)}")
+      if(log.isDebugEnabled){
+        snippets.foreach(s => log.debug(s"[$projectId][t:${s.kind}] ${net.flatmap.cobra.paths.Path.buildPathString(s)}"))
+      }
 
       context.become(running(ls, snippets))
     }) recover {
