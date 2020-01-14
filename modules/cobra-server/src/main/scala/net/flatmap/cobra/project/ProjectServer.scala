@@ -70,10 +70,9 @@ class ProjectServer(projectId: String, pid: Long, language: Language, mode: Mode
       context.become(running(ls, snippets))
     }) recover {
       case e: Throwable =>
-        log.error(e, s"could not start project actor for project '$projectId'")
-        //TODO discuss this strategie!
+        // ensure a single mis-defined LS does not bring down queries
+        log.error(e, s"could not start project server for project '$projectId'")
         context.become(faulty())
-        //context.stop(self)
     }
 
     log.debug(s"Project Server $projectId initialized")
@@ -115,8 +114,13 @@ class ProjectServer(projectId: String, pid: Long, language: Language, mode: Mode
   }
 
   def faulty(): Receive = {
-    case InitProject(`projectId`, _, _, _) => sender() ! ProjectInitialized(projectId)
-    case _:RequestSnippets => sender() ! SnippetResponse(projectId, mode, Nil)
+    case InitProject(`projectId`, _, _, _) =>
+      log.warning(s"could not start project server '$projectId'")
+      log.debug("sending Default Project Initialized Value")
+      sender() ! ProjectInitialized(projectId)
+    case _:RequestSnippets =>
+      log.warning(s"could not start language server for project server '$projectId', answering to query with 0 results")
+      sender() ! SnippetResponse(projectId, mode, Nil)
   }
 
   def running(ls: LanguageServer, dict: List[Snippet]): Receive = {
