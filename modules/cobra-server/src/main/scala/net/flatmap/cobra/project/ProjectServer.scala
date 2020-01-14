@@ -130,27 +130,6 @@ class ProjectServer(projectId: String, pid: Long, language: Language, mode: Mode
 
     case e => log.error(s"received unknown message: $e")
   }
-
-  //  def running(snippets: Map[String, Snippet]): Receive = {
-  //    case InitProject(`projectId`, _, _, _) => sender() ! ProjectInitialized(projectId)
-  //    case GetSnippet(reqId, LogicalPath(path)) => //path is already adjusted by project master!
-  //
-  //      log.info(snippets.toList.map{
-  //        case (p, s) => s"$p (${s.endLine-s.startLine+1}) (${s.startLine+1}-${s.endLine+1})" //keys.toList.sorted.mkString("\n")
-  //      }.sorted.mkString("\n"))
-  //
-  //      snippets.get(path)
-  //        .fold(sender() ! UnkownSnippet(reqId, "path not found"))(snippet => {
-  //          sender() ! ResolvedSnippet(
-  //            reqId,
-  //            SnippetResolver
-  //              .getSourceLines(snippet)
-  //              .mkString(Properties.lineSeparator),
-  //            Some(mode)
-  //          )
-  //        })
-  //    case e => log.error(s"received unknown message: $e")
-  //  }
 }
 
 object ProjectServer {
