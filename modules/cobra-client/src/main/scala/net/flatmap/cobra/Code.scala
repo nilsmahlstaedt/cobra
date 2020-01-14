@@ -25,7 +25,6 @@ object Code {
 
   // requests code snippets from server
   var handlers: RVar[Map[String, (String, Option[Mode]) => Unit]] = RVar(Map.empty)
-  //val openSnippetRequests = mutable.Map.empty[String, String => Unit]
 
   /**
    * resets the counter for pending snippet requests
@@ -35,7 +34,7 @@ object Code {
   }
 
   def simplyfySnippets(root: NodeSeqQuery): Unit = {
-    root.query("[src^='[']").elements.foreach{elem =>
+    root.query("[src]").elements.foreach{elem =>
       val childClasses = elem.query("pre[class~='sourceCode']")
         .elements
         .map(c => c.classList.toString.split(' ').toSet)
@@ -67,13 +66,9 @@ object Code {
       elem.insertAfter(replacement)
       elem.remove()
     }
-
-
-    //console.log("debugging all src elements!")
-    //root.query("[src]").elements.foreach(console.log(_))
   }
 
-  def loadDelayed2(root: NodeSeqQuery): Future[Unit] = {
+  def loadDelayed(root: NodeSeqQuery): Future[Unit] = {
     val p = Promise.apply[Unit]()
 
     root.query("code[src]:not([src^='#'])").elements.foreach { code =>
@@ -87,10 +82,14 @@ object Code {
       val mode = Mode.modes.find(_.fileendings.contains(ext)).getOrElse(Plain)
       code.classes += mode.name
 
-      val msg = if(src.startsWith("[")){
-        LogicalPath(src)
-      }else{
+      val knownFileEnding = Mode.modes
+        .flatMap(_.fileendings)
+        .foldLeft(false)((res,ending) => res || src.endsWith(ending))
+
+      val msg = if(knownFileEnding){
         PathSource(src, from, to)
+      }else{
+        LogicalPath(src)
       }
 
       handlers.modify(_ + (reqId -> ((content: String, mode:Option[Mode]) => {
@@ -99,23 +98,14 @@ object Code {
         Code.handlers.modify(_ - reqId)
       })))
 
-      CobraJS.send(WatchFile(src))
+      if(msg.isInstanceOf[PathSource]){
+        // no need to watch logical paths
+        // the server watches the file path behind it
+        CobraJS.send(WatchFile(src))
+      }
+
       CobraJS.send(GetSnippet(reqId, msg))
     }
-
-//    root.query("[src^='[']").elements.foreach {elem =>
-//      val reqId = UUID.randomUUID().toString
-//      val src = elem.getAttribute("src")
-//      val from = Option(code.getAttribute("from")).filter(_.nonEmpty).flatMap(_.toIntOption)
-//      val to = Option(code.getAttribute("to")).filter(_.nonEmpty).flatMap(_.toIntOption)
-//
-//      //TODO build code object with all atributes of the original object (but simplyfy the content to just basic text!)
-//      val parent = elem.parentNode
-//      val newElem = org.scalajs.dom.document.createElement("code")
-//      newElem.a
-//
-//      openS
-//    }
 
     // fulfill promise if no snippet remains to be inserted
     handlers.react(remaining => {
@@ -133,24 +123,6 @@ object Code {
     if(handlers().isEmpty) p.success(())
 
     fut
-  }
-
-  def loadDelayed(root: NodeSeqQuery): Future[Seq[String]] = Future.sequence {
-    root.query(s"code[src]:not([src^='#'])").elements.map { code =>
-      /*
-        select all <code> nodes that posses a src attribute, which do not start with a '#'
-       */
-      val src = code.getAttribute("src")
-      val ext = src.split("\\.").last
-      Mode.modes.find(_.fileendings.contains(ext)).foreach(code.classes += _.name)
-      CobraJS.send(WatchFile(src))
-      code.text = Ajax.get(src).filter(_.status == 200).map(_.responseText).recover {
-        // load src file via n ajax call to src's value
-        case NonFatal(e) =>
-          console.error(s"could not load source from '$src'")
-          s"could not load source from '$src'"
-      }
-    }
   }
 
   def stripIndentation(raw: String): String = {
