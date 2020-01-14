@@ -71,7 +71,9 @@ class ProjectServer(projectId: String, pid: Long, language: Language, mode: Mode
     }) recover {
       case e: Throwable =>
         log.error(e, s"could not start project actor for project '$projectId'")
-        context.stop(self)
+        //TODO discuss this strategie!
+        context.become(faulty())
+        //context.stop(self)
     }
 
     log.debug(s"Project Server $projectId initialized")
@@ -110,6 +112,11 @@ class ProjectServer(projectId: String, pid: Long, language: Language, mode: Mode
 
   override def receive: Receive = {
     case e => log.warning(s"received message before initializing! msg:$e")
+  }
+
+  def faulty(): Receive = {
+    case InitProject(`projectId`, _, _, _) => sender() ! ProjectInitialized(projectId)
+    case _:RequestSnippets => sender() ! SnippetResponse(projectId, mode, Nil)
   }
 
   def running(ls: LanguageServer, dict: List[Snippet]): Receive = {
