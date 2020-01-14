@@ -74,9 +74,6 @@ object Cobra extends App {
 
   val directory: File = if (args.isEmpty) File(".") else File(args.head)
 
-  // taken from CobraServer
-  // TODO refactor copied code from CobraServer
-
   def generateSlides(): Unit = {
     val conf = Configuration.read(directory)
     val pandocPath = conf.getString("markdown.pandoc.path")
