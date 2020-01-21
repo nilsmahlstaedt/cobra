@@ -18,7 +18,7 @@ object Snippet {
       endLine = s.getLocation.getRange.getEnd.getLine,
       kind = s.getKind
     ) :: Nil
-    case Right(d) => d.toSnippets("", source)//so far i haven't encountered a Document Symbol
+    case Right(d) => d.toSnippets("", source)
   }
 
   /**
@@ -28,21 +28,18 @@ object Snippet {
    */
   private implicit class DocumentSymbolVisitor(ds: DocumentSymbol) {
     def toSnippets(parentPath: String, source: Path): List[Snippet] = {
-      val snippet: Snippet = dsToS(ds, parentPath, source)
+      val snippet: Snippet = Snippet(
+        ds.getName,
+        Some(parentPath),
+        source,
+        ds.getRange.getStart.getLine,
+        ds.getRange.getEnd.getLine,
+        ds.getKind
+      )
+
       val children: List[DocumentSymbol] = ds.getChildren.asScala.toList
 
       snippet :: children.flatMap(_.toSnippets(parentPath+"/"+snippet.name, source))
     }
-  }
-
-  private def dsToS(ds: DocumentSymbol, path: String, source: Path): Snippet = {
-    Snippet(
-      ds.getName,
-      Some(path),
-      source,
-      ds.getRange.getStart.getLine,
-      ds.getRange.getEnd.getLine,
-      ds.getKind
-    )
   }
 }
