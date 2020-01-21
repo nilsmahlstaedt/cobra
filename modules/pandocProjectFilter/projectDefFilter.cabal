@@ -1,0 +1,40 @@
+name:                projectDefFilter
+version:             0.1.0.0
+synopsis:            Pandoc Filter adding values from the Meta Data as Html Blocks into the document
+description:         Takes all Projects defined in the Metadata YAML under the key "projects" with the format:
+                     "projects" => [Project]
+                     String (Project Key) =>
+                        "language" => String
+                        "root" => String (Path)
+                        "srcRoots => [String (Path)] (optional)
+
+                     and adds them as Raw HTML of the form:
+                     <div
+                        class="project-def"
+                        data-key=<project key>
+                        data-language=<language>
+                        data-root=<root>
+                        data-srcRoots="<srcRoot1>,<srcRoot2>, ..."
+                    ></div>
+
+homepage:            https://github.com/githubuser/projectDefFilter#readme
+license:             MIT
+license-file:        LICENSE
+author:              Author name here
+maintainer:          mahlstni@uni-bremen.de
+copyright:           2019 Nils Mahlstädt
+category:            Web
+build-type:          Simple
+cabal-version:       >=1.10
+extra-source-files:  README.md
+
+executable projectDefFilter
+  hs-source-dirs:      src
+  main-is:             Main.hs
+  default-language:    Haskell2010
+  other-modules:       MetaExtraction,
+                       ProjectBuilder
+  build-depends:       base >= 4.7 && < 5,
+                       pandoc-types >= 1.17.5 && < 1.18,
+                       formatting >= 6.3.7 && < 6.4,
+                       containers >= 0.5.6 && < 0.6.1
