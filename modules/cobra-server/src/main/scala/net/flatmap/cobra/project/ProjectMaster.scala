@@ -6,6 +6,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props, Terminated}
 import better.files._
 import net.flatmap.cobra._
 import net.flatmap.cobra.paths.PathParser
+import scala.concurrent.duration._
 
 import scala.util.{Failure, Success}
 
@@ -18,8 +19,11 @@ class ProjectMaster(mainPID: Long, baseDir: File) extends Actor with ActorLoggin
   def running(projects: Map[String, ActorRef]): Receive = {
     case ResetAllSnippets =>
       projects.foreach{
-        case (_, ref) => ref ! PoisonPill
+        case (_, ref) => {
+          context.stop(ref)
+        }
       }
+      context.become(running(Map.empty))
     case msg@InitProject(id, _, _, _) =>
       var updatedProjects = projects
 

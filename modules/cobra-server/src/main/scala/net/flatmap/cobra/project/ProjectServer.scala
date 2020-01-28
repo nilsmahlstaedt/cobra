@@ -2,7 +2,7 @@ package net.flatmap.cobra.project
 
 import java.nio.file.{Path, Paths, StandardWatchEventKinds}
 
-import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import better.files.FileWatcher._
 import better.files._
 import net.flatmap.cobra._
@@ -31,6 +31,7 @@ class ProjectServer(projectId: String, pid: Long, language: Language, mode: Mode
    * holds language server to be exited when actor dies
    */
   private var languageServerPlaceholder: Option[LanguageServer] = None
+  private var filewatches: List[ActorRef] = Nil
 
   override def preStart(): Unit = {
     super.preStart()
@@ -80,7 +81,17 @@ class ProjectServer(projectId: String, pid: Long, language: Language, mode: Mode
 
   override def postStop(): Unit = {
     super.postStop()
-    languageServerPlaceholder.foreach(_.exit())
+
+    //stop filewatches
+    filewatches.foreach(watcher => {
+      context.stop(watcher)
+    })
+
+    // stop ls
+    languageServerPlaceholder.foreach(server =>{
+      server.shutdown().get()
+      server.exit()
+    })
   }
 
   /**
@@ -94,7 +105,10 @@ class ProjectServer(projectId: String, pid: Long, language: Language, mode: Mode
    * @param snippetPaths path to watch out for in dir
    */
   private def watchFiles(dir: Path, snippetPaths: List[Path])(implicit sys: ActorSystem): Unit = {
-    context.actorOf(File(dir).watcherProps(recursive = false)) ! when(
+    val ref = context.actorOf(File(dir).watcherProps(recursive = false))
+    filewatches = ref :: filewatches
+
+    ref ! when(
       StandardWatchEventKinds.ENTRY_CREATE,
       StandardWatchEventKinds.ENTRY_DELETE,
       StandardWatchEventKinds.ENTRY_MODIFY) {
