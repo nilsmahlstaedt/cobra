@@ -2,9 +2,9 @@ package net.flatmap.cobra.project
 
 import java.nio.file.{Path, Paths, StandardWatchEventKinds}
 
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, PoisonPill, Props}
 import better.files.FileWatcher._
-import better.files._
+import better.files.{File, _}
 import net.flatmap.cobra._
 import net.flatmap.cobra.languageserver.{LSInteraction, LSLauncher}
 import net.flatmap.cobra.paths.SnippetSearch
@@ -83,9 +83,7 @@ class ProjectServer(projectId: String, pid: Long, language: Language, mode: Mode
     super.postStop()
 
     //stop filewatches
-    filewatches.foreach(watcher => {
-      context.stop(watcher)
-    })
+    filewatches.foreach(context.stop)
 
     // stop ls
     languageServerPlaceholder.foreach(server =>{
