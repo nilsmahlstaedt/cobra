@@ -29,9 +29,18 @@ case class Path(path: String, details: List[PathDetail]){
 object Path {
   def apply(path: String, details: PathDetail*) = new Path(path, details.toList)
 
-  def buildPathString(s: Snippet): String = buildPathString(s.parent, s.name)
-  def buildPathString(parent: Option[String], name: String): String = {
-    //s"/${parent.getOrElse("")}$name"
-    s"${parent.getOrElse("").replace('/','.')}$name"
+  def normalize(path: String): String = {
+    PathParser.producePathElems(path).mkString(".")
+  }
+
+  def getPathElements(s: Snippet): List[String] = producePathElements(s.parent, s.name)
+
+  def buildPathString(s: Snippet): String = getPathElements(s).mkString(".")
+
+  private def producePathElements(parent: Option[String], name: String): List[String] = {
+    val parentElems = parent.map(PathParser.producePathElems).getOrElse(Nil)
+    val nameElems = PathParser.producePathElems(name)
+
+    parentElems ::: nameElems
   }
 }

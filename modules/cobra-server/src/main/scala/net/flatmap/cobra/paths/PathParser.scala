@@ -6,6 +6,30 @@ import org.eclipse.lsp4j.SymbolKind
 import scala.util.Try
 
 trait PathParser {
+
+  /**
+   * parses general key structure of '[' tagChar ':' content ']'
+   * @return result of content parser
+   */
+  protected def key[V](tagChar: String, content: => P[V])(implicit ctxt: P[_]): P[V] = {
+    import SingleLineWhitespace._
+    P(("[" ~ tagChar ~ ":" ~ content ~ "]"))
+  }
+
+  /**
+   * reduces a list of keys by removing duplicate keys in last write wins fashion
+   */
+  protected def distinctKeys(xs: List[PathDetail]): List[PathDetail] = {
+    var keys = Map.empty[Class[_ <: PathDetail], PathDetail]
+    for(key <- xs){
+      if(!keys.contains(key.getClass)){
+        keys = keys + (key.getClass -> key)
+      }
+    }
+
+    keys.values.toList
+  }
+
   /**
    * parses a typename as defined in [[TypeNames.names]] in case sensitive form
    *
@@ -27,11 +51,6 @@ trait PathParser {
   protected def projectAssociation[_: P]: P[ProjectAssociation] = {
     P(CharsWhile(_.isLetterOrDigit).!)
       .map(ProjectAssociation.apply)
-  }
-
-  protected def key[V](tagChar: String, content: => P[V])(implicit ctxt: P[_]): P[V] = {
-    import SingleLineWhitespace._
-    P(("[" ~ tagChar ~ ":" ~ content ~ "]"))
   }
 
   protected def unknownKey[_:P]: P[Either[Unit, PathDetail]] = {
@@ -57,26 +76,39 @@ trait PathParser {
     }).map(distinctKeys)
   }
 
-  protected def distinctKeys(xs: List[PathDetail]): List[PathDetail] = {
-    var keys = Map.empty[Class[_ <: PathDetail], PathDetail]
-    for(key <- xs){
-      if(!keys.contains(key.getClass)){
-        keys = keys + (key.getClass -> key)
-      }
-    }
-
-    keys.values.toList
-  }
-
   protected def projectParser[_: P]: P[Path] = {
     import SingleLineWhitespace._
 
-    def snippetPath: P[String] = P(CharsWhile(!_.isWhitespace).!)
+    def snippetPath: P[String] = pathElems.map(_.mkString(".")) // P(CharsWhile(!_.isWhitespace).!)
 
     P(Start ~ keys ~ snippetPath ~ End)
       .map {
         case (keys, path) => Path(path, keys)
       }
+  }
+
+  protected def pathElems[_:P]: P[List[String]] = {
+    import SingleLineWhitespace._
+
+    def elem: P[String] = CharsWhile(_.isLetterOrDigit).!
+    def seperator: P[Unit] = CharIn(".",  "/", "#")
+    // added "/" and "#" for normalizing of strange LS outputs
+
+    P(seperator.? ~ elem ~ (seperator ~ elem).rep)
+      .map{
+        case (first, rest) => first :: rest.toList
+      }
+  }
+
+  /**
+   * splits a path into it's elements
+   * @return
+   */
+  def producePathElems(path: String): List[String] = {
+    parse(path, pathElems(_)) match {
+      case Parsed.Success(value, _) => value
+      case Parsed.Failure(_,_,_) => Nil
+    }
   }
 
   def extractPathParts(path: String): Either[String, Path] = {

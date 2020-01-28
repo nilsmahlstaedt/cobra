@@ -6,6 +6,9 @@ import net.flatmap.cobra.paths.{PathParser, ProjectAssociation, TypeBound}
 import org.eclipse.lsp4j.SymbolKind
 import org.scalatest.{FlatSpec, Matchers}
 
+/**
+ * tests the robustness of the key parser generation function
+ */
 class KeyParser extends FlatSpec with Matchers with PathParser {
 
   private object Parsers {

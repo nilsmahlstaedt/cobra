@@ -10,37 +10,33 @@ import org.scalatest.{FlatSpec, FunSuite, Matchers}
 class SnippetSearchTest extends FlatSpec with Matchers with SnippetSearch {
   val snippets: List[Snippet] = List(
     Snippet("myclass", Some("some/package/"), Paths.get("testfile"), 0, 0, SymbolKind.Class),
+    Snippet("myclass.func1", Some("some/package/"), Paths.get("testfile"), 0, 0, SymbolKind.Class),
+    Snippet("myclass.func1.foo", Some("some/package/"), Paths.get("testfile"), 0, 0, SymbolKind.Class),
     Snippet("myclass", Some("some/package/"), Paths.get("testfile"), 0, 0, SymbolKind.Object),
     Snippet("myfunc", Some("some/package/myclass/"), Paths.get("testfile"), 0, 0, SymbolKind.Function),
     Snippet("snippet", Some("some/other/"), Paths.get("testfile"), 0, 0, SymbolKind.Class),
   )
 
   "SnippetSearch" should "return all matches for an incomplete path" in {
-    val res0 = snippets.findSnippets(Path("some.package"))
-    res0.length shouldBe 3
-    res0 shouldBe snippets.take(3)
+    snippets.findSnippets(Path("myclass.func1")).head shouldBe snippets(1)
+    snippets.findSnippets(Path("myclass")).head shouldBe snippets.head
+    snippets.findSnippets(Path("foo")).head shouldBe snippets(2)
 
-    val res1 = snippets.findSnippets(Path("package"))
-    res1.length shouldBe 3
-    res1 shouldBe snippets.take(3)
-
-    val res2 = snippets.findSnippets(Path("other"))
-    res2.length shouldBe 1
-    res2 shouldBe List(snippets(3))
+    snippets.findSnippets(Path("package")).length shouldBe 0
+    snippets.findSnippets(Path("other")).length shouldBe 0
   }
 
   it should "find a complete path" in {
     val res = snippets.findSnippets(Path("some.package.myclass"))
-    res.length shouldBe 3
-    res shouldBe snippets.take(3)
+    res.length shouldBe 2
+    res shouldBe (snippets.head :: snippets(3) :: Nil)
 
     val res2 = snippets.findSnippets(Path("some.package.myclass.myfunc"))
     res2.length shouldBe 1
-    res2 shouldBe List(snippets(2))
+    res2 shouldBe List(snippets(4))
 
 
-    val res3 = snippets.findSnippets(Path("not.in.some.package"))
-    res3 shouldBe Nil
+    snippets.findSnippets(Path("not.in.some.package")) shouldBe Nil
   }
 
   it should "find snippets with relativ paths" in {
@@ -57,13 +53,13 @@ class SnippetSearchTest extends FlatSpec with Matchers with SnippetSearch {
   }
 
   it should "respect type bounds" in {
-    val res = snippets.findSnippets(Path("some.package", TypeBound(SymbolKind.Class)))
+    val res = snippets.findSnippets(Path("some.package.myclass", TypeBound(SymbolKind.Class)))
     res.length shouldBe 1
     res.head shouldBe snippets(0)
 
-    val res2 = snippets.findSnippets(Path("some.package", TypeBound(SymbolKind.Object)))
+    val res2 = snippets.findSnippets(Path("some.package.myclass", TypeBound(SymbolKind.Object)))
     res2.length shouldBe 1
-    res2.head shouldBe snippets(1)
+    res2.head shouldBe snippets(3)
   }
 
   it should "not find nodes where the name is only given partially" in {

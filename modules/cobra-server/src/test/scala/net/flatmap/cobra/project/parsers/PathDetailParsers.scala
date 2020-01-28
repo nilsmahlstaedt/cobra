@@ -6,6 +6,9 @@ import net.flatmap.cobra.paths.{PathParser, ProjectAssociation, TypeBound}
 import org.eclipse.lsp4j.SymbolKind
 import org.scalatest.{FlatSpec, Matchers}
 
+/**
+ * test if the TypeBound parsers accepts types defined by LSP regardless of capitalization
+ */
 class PathDetailParsers extends FlatSpec with Matchers with PathParser {
 
   "The TypeBound Parser" should "accept a value if it is defined as a symbolkind in the LSP spec" in {

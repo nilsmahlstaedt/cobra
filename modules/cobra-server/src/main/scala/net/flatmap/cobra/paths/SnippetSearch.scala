@@ -18,15 +18,18 @@ trait SnippetSearch{
   }
 
   implicit class SnippetDictionary(snippets: List[Snippet]) {
+
     def findSnippets(p:Path): List[Snippet] = {
+
       val typed: List[Snippet] = snippets
         .filter(s => p.typeBound().forall(bound => s.kind.equals(bound.typ)))
 
-      val pSplit = splitPath(p.path)
+      val pSplit = PathParser.producePathElems(p.path)
 
         typed.filter(s => {
-          val sSplit: List[String] = splitPath(Path.buildPathString(s))
-          sSplit.containsSlice(pSplit)
+          val sSplit: List[String] = Path.getPathElements(s)
+          //sSplit.equals(pSplit) ||
+          sSplit.endsWith(pSplit)
         })
     }
   }
