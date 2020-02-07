@@ -1,7 +1,7 @@
 package net.flatmap.cobra.project
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, ReceiveTimeout}
-import net.flatmap.cobra.paths.Path
+import net.flatmap.cobra.paths.{Path, PathParser}
 import net.flatmap.cobra.project.SearchActor.{RequestSnippets, SearchRequest, SnippetResponse}
 import net.flatmap.cobra._
 
@@ -11,13 +11,22 @@ import scala.util.Properties
 /**
  * one off actor performing a search request encapsulated in a path
  */
-class SearchActor extends Actor with ActorLogging {
+class SearchActor(reqId: String, reqPath: String, projects: Map[String, ActorRef], replyTo: ActorRef) extends Actor with ActorLogging {
 
   override def preStart(): Unit = {
     super.preStart()
-    // stop self if not receiving an answer for seconds to prevent resource leaks
-    // and to guarantee a response to the client
-    context.setReceiveTimeout(30.seconds)
+
+    PathParser.extractPathParts(reqPath) match {
+      case Left(error) =>
+        sender() ! UnknownSnippet(reqId, error)
+        context.stop(self)
+      case Right(logicalPath) =>
+        // initiate search
+        self ! SearchActor.SearchRequest(logicalPath)
+        // stop self if not receiving an answer for seconds to prevent resource leaks
+        // and to guarantee a response to the client
+        context.setReceiveTimeout(30.seconds)
+    }
   }
 
   /**
@@ -50,14 +59,14 @@ class SearchActor extends Actor with ActorLogging {
       val nextAnswers = msg :: answers
 
       if (nextWaitingFor.isEmpty) {
-        request.replyTo ! produceResponse(nextAnswers, 0, request)
+        replyTo ! produceResponse(nextAnswers, 0, request)
         context.stop(self)
       } else {
         context.become(collecting(nextWaitingFor, nextAnswers, request))
       }
 
     case ReceiveTimeout =>
-      request.replyTo ! produceResponse(answers, waitingFor.size, request)
+      replyTo ! produceResponse(answers, waitingFor.size, request)
       log.info(s"search actor for ${request.path} ran into timeout while awaiting responses from the following actors: $waitingFor")
       context.stop(self)
   }
@@ -66,11 +75,11 @@ class SearchActor extends Actor with ActorLogging {
    * default behaviour
    */
   def receive: Receive = {
-    case SearchActor.SearchRequest(reqId, projects, _, replyTo) if projects.isEmpty =>
+    case _:SearchActor.SearchRequest if projects.isEmpty =>
       replyTo ! UnknownSnippet(reqId, s"search initiated for a set of 0 projects!")
       context.stop(self)
 
-    case req@SearchActor.SearchRequest(reqId, projects, path, replyTo) =>
+    case req@SearchActor.SearchRequest(path) =>
       // start searching
       val toSearch = projectsToSearch(projects, path)
       if(toSearch.isEmpty){
@@ -113,15 +122,15 @@ class SearchActor extends Actor with ActorLogging {
     } yield SearchResult(project, mode, kindString, s)
 
     results match {
-      case Nil => UnknownSnippet(request.reqId, s"Could not find snippet for logical path ${request.path}")
+      case Nil => UnknownSnippet(reqId, s"Could not find snippet for logical path ${request.path}")
       case SearchResult(_, mode, _, snippet) :: Nil => ResolvedSnippet(
-        request.reqId,
+        reqId,
         SnippetResolver
           .getSourceLines(snippet)
           .mkString(Properties.lineSeparator),
         Some(mode)
       )
-      case xs => AmbiguousDefinition(request.reqId, xs.map(_.toSnippetDef))
+      case xs => AmbiguousDefinition(reqId, xs.map(_.toSnippetDef))
     }
   }
 }
@@ -132,7 +141,8 @@ object SearchActor {
 
   case class SnippetResponse(project: String, mode: Mode, snippets: List[Snippet])
 
-  case class SearchRequest(reqId: String, projects: Map[String, ActorRef], path: Path, replyTo: ActorRef)
+  case class SearchRequest(path: Path)
 
-  def props(): Props = Props(new SearchActor())
+  def props(reqID: String, reqPath: String, projects: Map[String, ActorRef], replyTo: ActorRef): Props =
+    Props(new SearchActor(reqID, reqPath, projects, replyTo))
 }

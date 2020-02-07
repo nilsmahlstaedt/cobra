@@ -58,12 +58,7 @@ class ProjectMaster(mainPID: Long, baseDir: File) extends Actor with ActorLoggin
     case msg@GetSnippet(_, _: PathSource) =>
       context.actorOf(Props(new SourceLoadActor(baseDirStr))).forward(msg)
     case GetSnippet(reqId, LogicalPath(path)) =>
-      PathParser.extractPathParts(path) match {
-        case Left(error) => sender() ! UnknownSnippet(reqId, error)
-        case Right(logicalPath) =>
-          // initiate search, task actor will respond to original sender
-          context.actorOf(SearchActor.props()) ! SearchActor.SearchRequest(reqId, projects, logicalPath, sender())
-      }
+      context.actorOf(SearchActor.props(reqId, path, projects, sender()))
 
     case e => log.warning(s"received unkown message: $e")
   }
